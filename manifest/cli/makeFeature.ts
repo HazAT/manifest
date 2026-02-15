@@ -29,7 +29,7 @@ export async function makeFeature(args: string[]): Promise<void> {
     .replace(/([a-z])([A-Z])/g, '$1-$2')
     .toLowerCase()
 
-  const defaultMethod = type === 'stream' ? 'GET' : 'GET'
+  const defaultMethod = type === 'stream' ? 'POST' : 'GET'
   let routeLine = `route: ['${defaultMethod}', '/api/${kebabName}'],`
   if (route) {
     const [method, ...pathParts] = route.split(' ')

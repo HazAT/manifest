@@ -49,7 +49,7 @@ export async function check(_args: string[]): Promise<number> {
       if ((feature as any).handle) {
         issues.push(`Feature '${name}' is type 'stream' but has a handle() function. Stream features must use stream() instead. → Replace handle() with stream() in ${featureFile}.`)
       }
-      if (feature.route.length === 0) {
+      if ((feature.route as any[]).length === 0) {
         issues.push(`Feature '${name}' is type 'stream' but has no route. Stream features require a route. → Add route: ['GET', '/api/path'] to defineFeature() in ${featureFile}.`)
       }
     }
