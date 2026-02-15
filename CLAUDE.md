@@ -2,6 +2,8 @@
 
 > Production is our dev environment.
 
+**Read `VISION.md` first.** It describes what this project is, why it exists, and what it's building toward. That context shapes every decision you make here.
+
 You are working on a Manifest project. Read this file completely before writing any code.
 
 ## What This Is
@@ -22,6 +24,8 @@ Manifest is a TypeScript/Bun framework where every piece of code is written to b
 
 **Commits carry knowledge.** Every commit message should be descriptive enough that an agent reading `git log` understands what changed and why without looking at the diff. Use a clear subject line and a body that explains the reasoning, what files were affected, and any migration steps. For larger changes, point to a plan file. The commit history is how the local agent learns what happened while it wasn't watching — treat it as a knowledge transfer, not a formality. Load `.claude/skills/manifest-commit/SKILL.md` before committing.
 
+**Know the why.** Before building a feature, understand why it exists — not just what it does. If the user asks for something and the motivation isn't clear, ask. The answer might change the approach, or reveal that the real need is different from the request. When you learn something that shifts the project's direction or clarifies its purpose, update `VISION.md`. Keep it brief — a few sentences, not an essay. The vision should evolve with the project, not fossilize after day one.
+
 **We build this together.** The codebase is a shared workspace — between you, the next agent, and the human. When you make a significant change, the ripple doesn't stop at the code. Ask yourself: does AGENTS.md still tell the truth? Are the skills still accurate? Does MANIFEST.md reflect reality? Does the config cover what was just added? Every significant change is a prompt to check that the rest of the system still makes sense. Run `bun manifest learn` after large changes, or load `.claude/skills/manifest-learn/SKILL.md` for the full checklist. The goal is simple: no one should ever follow stale instructions because you forgot to update the map after moving the furniture.
 
 ## Your Codebase, Your Choices
@@ -33,6 +37,7 @@ That's fine. When you add things, just try to keep them explicit and self-explan
 ## Project Structure
 
 ```
+├── VISION.md           # The soul. What this project is and why it exists.
 ├── MANIFEST.md         # Auto-generated index. Read this to orient yourself.
 ├── manifest/           # THE FRAMEWORK. Source code. Read it, modify it.
 ├── features/           # One file per behavior. This IS the application.
