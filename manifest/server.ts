@@ -1,7 +1,12 @@
+import path from 'path'
+import fs from 'fs'
 import { scanAllFeatures } from './scanner'
 import { createRouter } from './router'
 import { validateInput } from './validator'
 import { toEnvelope, createResultHelpers } from './envelope'
+import { createStaticHandler, watchFrontend } from './frontend'
+import frontendConfig from '../config/frontend'
+import manifestConfig from '../config/manifest'
 
 export interface ManifestServerOptions {
   projectDir: string
@@ -14,12 +19,37 @@ export async function createManifestServer(options: ManifestServerOptions) {
   const registry = await scanAllFeatures(options.projectDir)
   const router = createRouter(registry)
 
+  // Static file serving (only if dist/ exists)
+  const distDir = path.resolve(options.projectDir, frontendConfig.outputDir)
+  const staticHandler = fs.existsSync(distDir)
+    ? createStaticHandler(distDir, { spaFallback: frontendConfig.spaFallback })
+    : null
+
+  // Live reload SSE clients (dev mode only)
+  const reloadClients = new Set<ReadableStreamDefaultController>()
+
   const server = Bun.serve({
     port: options.port ?? 3000,
     fetch: async (req) => {
       const url = new URL(req.url)
       const method = req.method
       const pathname = url.pathname
+
+      // Dev-only SSE endpoint for live reload
+      if (pathname === '/__dev/reload' && manifestConfig.debug && frontendConfig.devReload) {
+        const stream = new ReadableStream({
+          start(controller) {
+            reloadClients.add(controller)
+            controller.enqueue('event: connected\ndata: connected\n\n')
+          },
+          cancel(controller) {
+            reloadClients.delete(controller)
+          },
+        })
+        return new Response(stream, {
+          headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' },
+        })
+      }
 
       // Try to match route
       const match = router.match(method, pathname)
@@ -28,6 +58,13 @@ export async function createManifestServer(options: ManifestServerOptions) {
         if (router.isMethodNotAllowed(method, pathname)) {
           return Response.json({ status: 405, message: 'Method not allowed' }, { status: 405 })
         }
+
+        // Fallback to static files
+        if (staticHandler) {
+          const staticResponse = staticHandler(pathname)
+          if (staticResponse) return staticResponse
+        }
+
         return Response.json({ status: 404, message: 'Not found' }, { status: 404 })
       }
 
@@ -98,10 +135,30 @@ export async function createManifestServer(options: ManifestServerOptions) {
     },
   })
 
+  const notifyReload = () => {
+    for (const client of reloadClients) {
+      try {
+        client.enqueue('event: reload\ndata: reload\n\n')
+      } catch {
+        reloadClients.delete(client)
+      }
+    }
+  }
+
+  // In dev mode, watch frontend/ and trigger live reload automatically.
+  // This makes dev mode single-process: just `bun --hot index.ts`.
+  if (manifestConfig.debug && frontendConfig.devReload) {
+    const frontendDir = path.resolve(options.projectDir, 'frontend')
+    if (fs.existsSync(frontendDir)) {
+      watchFrontend(options.projectDir, notifyReload)
+    }
+  }
+
   return {
     port: server.port,
     stop() {
       server.stop()
     },
+    notifyReload,
   }
 }

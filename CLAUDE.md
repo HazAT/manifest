@@ -177,6 +177,9 @@ bun run manifest feature make <Name>      # Scaffold a new feature
 bun run manifest extension make <name>    # Scaffold a new extension
 bun run manifest extension install <src>  # Install an extension
 bun run manifest extension list           # List installed extensions
+bun run manifest frontend install        # Choose and install a frontend preset
+bun run manifest frontend build          # Build the frontend
+bun run manifest frontend dev            # Start frontend watcher with live reload
 ```
 
 ## The Framework

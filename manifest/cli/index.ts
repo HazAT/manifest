@@ -36,6 +36,10 @@ Usage:
   bun manifest extension install <url|name>   Install an extension
   bun manifest extension list                 List installed extensions
 
+  bun manifest frontend install               Choose and install a frontend preset
+  bun manifest frontend build                 Build frontend for production
+  bun manifest frontend dev                   Start frontend dev watcher
+
 Aliases:
   bun manifest make:feature <Name>            Same as feature make
 
@@ -83,6 +87,32 @@ switch (command) {
         console.error(subcommand
           ? `Unknown feature subcommand: ${subcommand}`
           : 'Missing subcommand. Usage: bun manifest feature make <Name>')
+        process.exit(1)
+    }
+    break
+  }
+  case 'frontend': {
+    const subcommand = args[1]
+    switch (subcommand) {
+      case 'install': {
+        const { frontendInstall } = await import('./frontend')
+        await frontendInstall(args.slice(2))
+        break
+      }
+      case 'build': {
+        const { frontendBuild } = await import('./frontend')
+        await frontendBuild(args.slice(2))
+        break
+      }
+      case 'dev': {
+        const { frontendDev } = await import('./frontend')
+        await frontendDev(args.slice(2))
+        break
+      }
+      default:
+        console.error(subcommand
+          ? `Unknown frontend subcommand: ${subcommand}`
+          : 'Missing subcommand. Usage: bun manifest frontend install|build|dev')
         process.exit(1)
     }
     break

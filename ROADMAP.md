@@ -26,6 +26,22 @@ The core framework exists and works end-to-end.
 
 ---
 
+## ✅ Frontend Support (done)
+
+Built-in frontend support with preset extensions and Bun-native tooling.
+
+- [x] Static file serving from `dist/` as fallback after API routes
+- [x] `Bun.build()` wrapper with source maps always on
+- [x] Live reload in dev mode via SSE (`/__dev/reload`)
+- [x] CLI commands: `manifest frontend install/build/dev`
+- [x] **Static preset** — HTML + Tailwind CSS + vanilla TypeScript
+- [x] **Reactive preset** — SolidJS + Tailwind CSS + JSX
+- [x] `manifest-frontend` agent skill
+- [x] Spark integration (Step 3: Choose Your Stack)
+- [ ] **Full SPA preset** — Vite-based with client-side routing (future)
+
+---
+
 ## 🔨 Phase 1: Real Applications
 
 What you need to build something beyond HelloWorld. This turns Manifest from a framework demo into something you'd ship.
