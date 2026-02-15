@@ -1,0 +1,32 @@
+# Manifest: php-agent-framework
+
+## System
+- Runtime: Bun 1.3.1, TypeScript, Manifest 0.1.x
+- Generated: 2026-02-15
+
+## Architecture
+This is a Manifest application. All behavior lives in feature files.
+- features/ - One file per application behavior (1 features)
+- schemas/ - Drizzle ORM table definitions (0 schemas)
+- services/ - Shared services (0 services)
+- commands/ - CLI commands (0 commands)
+
+## Conventions
+- NEVER use decorator-based patterns. Features are defined with defineFeature().
+- NEVER create event listeners or middleware. Side effects go in the feature's handle() function.
+- NEVER scatter one behavior across multiple files. One feature = one file.
+- Every input field MUST have a description.
+- Features MUST declare all side effects in the feature definition.
+- Schema fields MUST have JSDoc descriptions.
+- All dependencies MUST be explicit imports. No global state, no service locators.
+
+## Feature Index
+| Name | Route | Type | Description |
+|------|-------|------|-------------|
+| hello-world | GET /api/hello | request | A simple greeting endpoint. Returns a hello message with the provided name, or " |
+
+## Known Issues
+- None currently.
+
+## Recent Changes
+- 2026-02-15: MANIFEST.md generated
