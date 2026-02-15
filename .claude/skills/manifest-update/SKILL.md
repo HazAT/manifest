@@ -1,3 +1,8 @@
+---
+name: manifest-update
+description: Update your Manifest project from the upstream base repository. Use when the user says "manifest update", "update from upstream", or "pull upstream changes". Reads upstream commits, understands intent, and applies changes intelligently.
+---
+
 # Manifest Update
 
 Update your Manifest project from the upstream base repository.

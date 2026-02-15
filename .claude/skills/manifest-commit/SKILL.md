@@ -1,3 +1,8 @@
+---
+name: manifest-commit
+description: Write knowledge-transfer git commits for Manifest projects. Use when making git commits. Commits include a typed subject line and a detailed body explaining what changed, why, and how.
+---
+
 # Manifest Commit
 
 Write a git commit for the current changes. In Manifest, commits are knowledge transfer — the primary way agents and humans understand what happened and why.
