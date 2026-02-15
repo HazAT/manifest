@@ -89,6 +89,12 @@ or dependencies that need to be set up.]
 | Name | Route | Description |
 |------|-------|-------------|
 
+## Troubleshooting
+
+[FILL IN: Common issues, what can go wrong, and how to fix it. This section
+is read by \`bun manifest doctor\` and shown to agents when diagnosing problems.
+Write it as step-by-step checks an agent can follow to self-repair.]
+
 ## Dependencies
 
 [FILL IN: npm packages, other extensions, or services this depends on. Remove if none.]

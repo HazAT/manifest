@@ -227,6 +227,42 @@ This assumes you have a `hello` feature at `GET /api/hello`. Replace with your a
 
 ---
 
+## Troubleshooting
+
+When the frontend isn't working, run through these checks in order.
+
+### Build fails or produces no output
+
+1. Run `bun manifest frontend build` and read the error output.
+2. Check that `config/frontend.ts` exists and has `entryPoint: 'frontend/index.ts'`.
+3. Check that `frontend/index.ts` exists — if the entry point is missing, the build has nothing to bundle.
+4. Check that `tailwindcss` is installed: `bun pm ls | grep tailwindcss`. If missing, run `bun add tailwindcss`.
+
+### Styles missing or Tailwind classes not working
+
+1. Check that `frontend/styles.css` contains `@import "tailwindcss";`.
+2. Check that `index.html` has a `<link>` to the built CSS file (e.g., `<link rel="stylesheet" href="/index.css">`).
+3. Run `bun manifest frontend build` and verify `dist/index.css` exists and is not empty.
+4. If classes exist in CSS but don't render, hard-refresh the browser (`Cmd+Shift+R`) — the old CSS may be cached.
+
+### Dev reload not working
+
+1. Check that `config/frontend.ts` has `devReload: true`.
+2. Open browser dev tools → Network tab → look for a connection to `/__dev/reload`. If it's not there, check that the dev reload script is in `index.html`.
+3. The dev reload script only activates on `localhost`. If you're accessing via IP or a different hostname, it won't fire.
+4. Check the server is running with `bun --hot index.ts`, not a standalone static file server.
+
+### Static assets in public/ not served
+
+1. Check that files are in `frontend/public/`, not `frontend/` directly.
+2. Run `bun manifest frontend build` and check that files appear in `dist/`.
+3. Reference assets with absolute paths (`/images/logo.png`), not relative (`images/logo.png`).
+
+### SPA routing returns 404
+
+1. Check that `config/frontend.ts` has `spaFallback: true`.
+2. Make sure the route you're hitting doesn't match an API route or a real file in `dist/` — those take priority over the SPA fallback.
+
 ## File Structure After Install
 
 ```

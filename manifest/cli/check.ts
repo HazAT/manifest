@@ -15,7 +15,7 @@
 
 import { scanAllFeatures } from '../scanner'
 import path from 'path'
-import { existsSync, readdirSync } from 'fs'
+import { existsSync, readdirSync, readFileSync } from 'fs'
 
 export async function check(_args: string[]): Promise<number> {
   const projectDir = process.cwd()
@@ -69,7 +69,7 @@ export async function check(_args: string[]): Promise<number> {
     }
   }
 
-  // Check extensions have EXTENSION.md
+  // Check extensions have EXTENSION.md and a Troubleshooting section
   const extensionsDir = path.join(projectDir, 'extensions')
   if (existsSync(extensionsDir)) {
     try {
@@ -79,6 +79,13 @@ export async function check(_args: string[]): Promise<number> {
         const mdPath = path.join(extensionsDir, entry.name, 'EXTENSION.md')
         if (!existsSync(mdPath)) {
           issues.push(`Extension '${entry.name}' has no EXTENSION.md. → Create extensions/${entry.name}/EXTENSION.md or run: bun manifest extension make ${entry.name}`)
+        } else {
+          try {
+            const content = readFileSync(mdPath, 'utf-8')
+            if (!/^## Troubleshooting\b/m.test(content)) {
+              issues.push(`Extension '${entry.name}' has no Troubleshooting section. → Add a \`## Troubleshooting\` section to extensions/${entry.name}/EXTENSION.md so \`bun manifest doctor\` can help agents self-repair.`)
+            }
+          } catch {}
         }
       }
     } catch {}

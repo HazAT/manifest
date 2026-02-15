@@ -369,6 +369,53 @@ The script only activates on `localhost` — it does nothing in production.
 
 ---
 
+## Troubleshooting
+
+When the frontend isn't working, run through these checks in order.
+
+### Build fails with JSX errors
+
+1. Check `tsconfig.json` has both `"jsx": "preserve"` and `"jsxImportSource": "solid-js"` in `compilerOptions`. Without these, Bun doesn't know how to transform JSX and will either fail or silently use React's transform (which breaks SolidJS).
+2. Check that `solid-js` is installed: `bun pm ls | grep solid-js`. If missing, run `bun add solid-js`.
+3. Make sure frontend files use `.tsx` extension, not `.ts`, for any file containing JSX.
+
+### Build fails or produces no output
+
+1. Run `bun manifest frontend build` and read the error output.
+2. Check that `config/frontend.ts` exists and has `entryPoint: 'frontend/index.tsx'` (note `.tsx`, not `.ts`).
+3. Check that `frontend/index.tsx` exists — if the entry point is missing, the build has nothing to bundle.
+
+### Components re-render entirely instead of updating fine-grained
+
+This means SolidJS's reactivity isn't wired up correctly. Common causes:
+1. Destructuring props in component arguments — don't do `function Comp({ name })`, do `function Comp(props)` and access `props.name` in JSX. Destructuring breaks reactivity tracking.
+2. Calling signals outside of JSX or `createEffect` — `const val = count()` captures a snapshot. Use `count()` directly in JSX or inside reactive contexts.
+
+### Styles missing or Tailwind classes not working
+
+1. Check that `frontend/styles.css` contains `@import "tailwindcss";`.
+2. Check that `index.html` has a `<link>` to the built CSS file (e.g., `<link rel="stylesheet" href="/index.css">`).
+3. Run `bun manifest frontend build` and verify `dist/index.css` exists and is not empty.
+4. SolidJS uses `class`, not `className`. If you wrote `className="..."`, it won't apply Tailwind classes.
+
+### Dev reload not working
+
+1. Check that `config/frontend.ts` has `devReload: true`.
+2. Open browser dev tools → Network tab → look for a connection to `/__dev/reload`. If it's not there, check that the dev reload script is in `index.html`.
+3. The dev reload script only activates on `localhost`. If you're accessing via IP or a different hostname, it won't fire.
+4. Check the server is running with `bun --hot index.ts`, not a standalone static file server.
+
+### Static assets in public/ not served
+
+1. Check that files are in `frontend/public/`, not `frontend/` directly.
+2. Run `bun manifest frontend build` and check that files appear in `dist/`.
+3. Reference assets with absolute paths (`/images/logo.png`), not relative (`images/logo.png`).
+
+### SPA routing returns 404
+
+1. Check that `config/frontend.ts` has `spaFallback: true`.
+2. Make sure the route you're hitting doesn't match an API route or a real file in `dist/` — those take priority over the SPA fallback.
+
 ## File Structure After Install
 
 ```

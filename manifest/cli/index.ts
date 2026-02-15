@@ -30,6 +30,7 @@ Usage:
   bun manifest index                          Rebuild MANIFEST.md
   bun manifest check                          Validate conventions
   bun manifest learn                          Check for staleness after changes
+  bun manifest doctor                         Diagnose issues using extension guidance
 
   bun manifest feature make <Name>            Scaffold a new feature
   bun manifest extension make <name>          Scaffold a new extension
@@ -67,6 +68,12 @@ switch (command) {
   case 'learn': {
     const { learn } = await import('./learn')
     const exitCode = await learn(args.slice(1))
+    process.exit(exitCode)
+    break
+  }
+  case 'doctor': {
+    const { doctor } = await import('./doctor')
+    const exitCode = await doctor(args.slice(1))
     process.exit(exitCode)
     break
   }

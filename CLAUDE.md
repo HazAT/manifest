@@ -173,6 +173,7 @@ bun test                                  # Run all tests
 bun run manifest index                    # Regenerate MANIFEST.md
 bun run manifest check                    # Validate conventions
 bun run manifest learn                    # Check for staleness after changes
+bun run manifest doctor                   # Diagnose issues using extension guidance
 bun run manifest feature make <Name>      # Scaffold a new feature
 bun run manifest extension make <name>    # Scaffold a new extension
 bun run manifest extension install <src>  # Install an extension
@@ -197,7 +198,7 @@ The framework lives in `manifest/`. It's ~1,700 lines total. Read it:
 | `scanner.ts` | 60 | Scans features directory and extensions, dynamically imports `.ts` files. |
 | `testing.ts` | 73 | `createTestClient()` — call features by name without HTTP. |
 | `index.ts` | 31 | Barrel export for framework types and utilities. |
-| `cli/` | 1013 | CLI commands: serve, index, check, learn, make:feature, extension (make/install/list). |
+| `cli/` | ~1100 | CLI commands: serve, index, check, learn, doctor, make:feature, extension (make/install/list). |
 
 If something in the framework doesn't work for your use case, modify it. It's your code.
 
@@ -260,6 +261,18 @@ Manage extensions with CLI commands:
 - `bun run manifest extension make <name>` — Scaffold a new extension
 - `bun run manifest extension install <src>` — Install from a source
 - `bun run manifest extension list` — List installed extensions
+- `bun run manifest doctor` — Diagnose system issues and show extension troubleshooting
+
+### Troubleshooting section (required)
+
+Every extension MUST include a `## Troubleshooting` section in its `EXTENSION.md`. This section is read by `bun manifest doctor` and shown to agents when something breaks. Write it as step-by-step diagnostic checks — things an agent can run to figure out what went wrong and self-repair without asking for help.
+
+Good troubleshooting entries include:
+- **What can go wrong** — missing dependencies, misconfigured files, stale builds
+- **How to detect it** — specific commands to run, files to check, error messages to look for
+- **How to fix it** — exact commands or steps to restore a working state
+
+Think of it as instructions for an agent that just encountered an error and needs to figure out why, without any human help.
 
 ## Extensions
 
