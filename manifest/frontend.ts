@@ -86,11 +86,17 @@ export async function watchFrontend(projectDir: string, onRebuild?: () => void) 
 }
 
 export function createStaticHandler(distDir: string, options: { spaFallback: boolean }) {
+  const resolvedDistDir = path.resolve(distDir)
+
   return (pathname: string): Response | null => {
     // Never serve hidden files
     if (pathname.split('/').some((s) => s.startsWith('.'))) return null
 
-    const filePath = path.join(distDir, pathname)
+    const filePath = path.resolve(resolvedDistDir, pathname.slice(1))
+
+    // Path traversal guard: ensure resolved path stays within distDir
+    if (!filePath.startsWith(resolvedDistDir + '/') && filePath !== resolvedDistDir) return null
+
     const file = Bun.file(filePath)
 
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
