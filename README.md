@@ -2,6 +2,34 @@
 
 > *Production is our dev environment.*
 
+### Start building in 10 seconds
+
+Paste this into your AI agent (Claude, Cursor, Copilot, any agent with terminal access):
+
+```
+Download and follow the steps from https://github.com/hazat/manifest/blob/main/SPARK.md
+```
+
+That's it. Your agent becomes a setup guide called **Spark** that walks you through forking, configuring, and building your first feature.
+
+<details>
+<summary>Want to read what SPARK.md does before pasting? Smart. Click here.</summary>
+
+SPARK.md is a prompt that turns your agent into a Manifest onboarding guide. It will:
+
+1. Check that Bun and git are installed
+2. Guide you to fork and clone the repo
+3. Help you rename the project to yours
+4. Verify the server runs and tests pass
+5. Walk you through building your first feature
+6. Hand off once you're set up
+
+No telemetry. No install scripts. No magic. It's a markdown file with instructions your agent follows step by step. Read it yourself: [SPARK.md](SPARK.md)
+
+</details>
+
+---
+
 The first framework where the agent isn't using the framework — it **is** the framework. Manifest is source code the whole way down. No npm package, no hidden runtime, no abstractions the agent can't read. The framework ships inside your project as ~1,000 lines of TypeScript that the agent wrote, understands, and evolves alongside your application.
 
 Built on Bun. No build step. No magic.
