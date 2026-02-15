@@ -94,6 +94,43 @@ export default defineFeature({
 })
 ```
 
+### Stream features (SSE)
+
+Stream features use `type: 'stream'` and define a `stream()` function instead of `handle()`:
+
+```typescript
+import { defineFeature, t } from '../manifest'
+
+export default defineFeature({
+  name: 'chat-stream',
+  description: `Streams chat responses token by token via Server-Sent Events.
+                Accepts a prompt and returns tokens as they're generated.`,
+  type: 'stream',
+  route: ['POST', '/api/chat'],
+  authentication: 'required',
+  sideEffects: ['Calls LLM API'],
+  errorCases: ['400 - Empty prompt'],
+
+  input: {
+    prompt: t.string({ description: 'The user prompt to respond to.', required: true }),
+  },
+
+  async stream({ input, emit, close, fail }) {
+    emit('Hello')                          // plain text, no event name
+    emit({ token: 'Hello' })              // JSON object
+    emit('token', 'world')                // named event + text
+    emit('done', { total: 2 })            // named event + JSON
+    // Stream auto-closes when function returns
+  },
+})
+```
+
+The `emit()` function sends SSE events:
+- `emit(data)` — sends data (string or JSON object)
+- `emit(event, data)` — sends a named event with data
+
+The stream auto-closes when `stream()` returns. Use `close()` for early termination or `fail(message)` to send an error event and close.
+
 ### Guidelines for features:
 - **description** — Mandatory. 2-3 sentences. Written for an agent reading this cold.
 - **input fields** — Every field needs a `description`.
@@ -129,6 +166,18 @@ describe('feature-name', () => {
   test('validation error', async () => {
     const result = await client.call('feature-name', {})
     expect(result.status).toBe(422)
+  })
+})
+```
+
+### Testing stream features
+
+```typescript
+describe('chat-stream', () => {
+  test('streams tokens', async () => {
+    const events = await client.stream('chat-stream', { prompt: 'Hello world' })
+    expect(events.length).toBeGreaterThan(0)
+    expect(events[0]).toEqual({ event: 'start', data: { totalTokens: 2 } })
   })
 })
 ```
@@ -185,20 +234,20 @@ bun run manifest frontend dev            # Start frontend watcher with live relo
 
 ## The Framework
 
-The framework lives in `manifest/`. It's ~1,700 lines total. Read it:
+The framework lives in `manifest/`. It's ~2,500 lines total. Read it:
 
 | File | Lines | What it does |
 |------|-------|-------------|
 | `types.ts` | 141 | Input type builders: `t.string()`, `t.integer()`, etc. |
 | `validator.ts` | 92 | Validates input against schema. Formats, lengths, ranges. |
-| `feature.ts` | 83 | `defineFeature()` and all feature types. |
-| `server.ts` | 107 | `Bun.serve()` wrapper. Route matching → validation → execution → envelope. |
+| `feature.ts` | 168 | `defineFeature()` and all feature types (request, stream, event). |
+| `server.ts` | 223 | `Bun.serve()` wrapper. Route matching → validation → execution → envelope. SSE streaming. |
 | `router.ts` | 76 | HTTP route matching with path parameters. |
 | `envelope.ts` | 65 | Response formatting. `ok()`, `fail()`, `toEnvelope()`. |
-| `scanner.ts` | 60 | Scans features directory and extensions, dynamically imports `.ts` files. |
-| `testing.ts` | 73 | `createTestClient()` — call features by name without HTTP. |
+| `scanner.ts` | 71 | Scans features directory and extensions, dynamically imports `.ts` files. |
+| `testing.ts` | 121 | `createTestClient()` — call features by name without HTTP. Stream testing. |
 | `index.ts` | 31 | Barrel export for framework types and utilities. |
-| `cli/` | ~1100 | CLI commands: serve, index, check, learn, doctor, make:feature, extension (make/install/list). |
+| `cli/` | ~1400 | CLI commands: serve, index, check, learn, doctor, make:feature, extension (make/install/list), frontend. |
 
 If something in the framework doesn't work for your use case, modify it. It's your code.
 
