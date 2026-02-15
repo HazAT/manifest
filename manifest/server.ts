@@ -54,7 +54,10 @@ export async function createManifestServer(options: ManifestServerOptions) {
               Object.assign(input, body)
             }
           } catch {
-            // ignore parse errors
+            return Response.json(
+              { status: 400, message: 'Invalid JSON body', meta: { request_id: requestId, duration_ms: Math.round(performance.now() - start) } },
+              { status: 400 },
+            )
           }
         }
 

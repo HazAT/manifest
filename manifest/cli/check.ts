@@ -70,7 +70,10 @@ export async function check(_args: string[]): Promise<number> {
     issues.push('MANIFEST.md does not exist. Run `bun manifest index` to generate it.')
   }
 
-  passes.push('All routes are unique.')
+  const hasDuplicateRoutes = issues.some((i) => i.startsWith('Duplicate route'))
+  if (!hasDuplicateRoutes) {
+    passes.push('All routes are unique.')
+  }
 
   console.log('')
   for (const issue of issues) {

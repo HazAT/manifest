@@ -1,6 +1,6 @@
 /**
  * Start the Manifest development server.
- * Usage: bun manifest serve [--port=8080] [--host=0.0.0.0]
+ * Usage: bun manifest serve [--port=8080]
  */
 
 import { createManifestServer } from '../server'
@@ -8,14 +8,10 @@ import { createManifestServer } from '../server'
 export async function serve(args: string[]): Promise<void> {
   const projectDir = process.cwd()
   let port = 8080
-  let host = '0.0.0.0'
 
   for (const arg of args) {
     if (arg.startsWith('--port=')) {
       port = parseInt(arg.slice(7), 10)
-    }
-    if (arg.startsWith('--host=')) {
-      host = arg.slice(7)
     }
   }
 
@@ -25,7 +21,7 @@ export async function serve(args: string[]): Promise<void> {
   })
 
   console.log(``)
-  console.log(`  Manifest server running on http://${host}:${server.port}`)
+  console.log(`  Manifest server running on http://localhost:${server.port}`)
   console.log(`  Production is our dev environment.`)
   console.log(``)
   console.log(`  Tip: Run with 'bun --hot' for live reload:`)

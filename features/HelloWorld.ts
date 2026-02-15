@@ -19,7 +19,7 @@ export default defineFeature({
   },
 
   async handle({ input, ok }) {
-    const name = (input as Record<string, unknown>).name ?? 'World'
+    const name = String(input.name ?? 'World')
     return ok(`Hello, ${name}!`, {
       data: { greeting: `Hello, ${name}!` },
     })
