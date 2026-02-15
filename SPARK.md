@@ -162,7 +162,45 @@ Tell the user:
 
 Tell the user what you changed.
 
-### Step 3: Verify It Works
+### Step 3: Choose Your Stack
+
+Now evaluate what the user told you they're building. Every Manifest project has an API — that's a given. The question is whether it also needs a frontend.
+
+**Auto-decide when it's obvious.** Don't ask robotically. If the answer is clear from what they described, just act:
+
+- **Pure API** (mobile backend, webhook service, microservice, CLI tool) → Skip this step entirely. Don't mention frontends. Move to Step 4.
+- **Content site** (blog, docs site, landing page, portfolio) → Static frontend. Tell the user:
+  > A blog is static content — HTML pages that fetch data from your API. I'll set up a static frontend: HTML + Tailwind + vanilla TypeScript. No framework overhead.
+- **Interactive app** (dashboard, admin panel, real-time UI, anything with client-side state) → Reactive frontend. Tell the user:
+  > A dashboard needs interactivity — components that react to data changes. I'll set up SolidJS + Tailwind. Fine-grained reactivity, no virtual DOM. Fits Manifest's philosophy.
+
+**Ask when it's ambiguous.** If the project could go either way — a SaaS that might be API-first, a marketplace that might have a separate frontend — present the choice:
+
+> Your project needs an API — that's a given. Do you also want a frontend served from the same project? Three options:
+>
+> 1. **Backend only** — just the API. You'll build the frontend separately or don't need one.
+> 2. **Static frontend** — HTML + Tailwind + vanilla TypeScript. Good for content sites, blogs, simple pages. No framework.
+> 3. **Reactive frontend** — SolidJS + Tailwind. Good for interactive apps, dashboards, anything with client-side state.
+>
+> What fits?
+
+**When they choose backend only (or you auto-decided pure API):**
+Skip. Don't create `config/frontend.ts`. Don't mention frontends again. Move to Step 4.
+
+**When a frontend is chosen (auto or by the user):**
+
+Install the corresponding extension. Read its `EXTENSION.md` and follow every step:
+
+- **Static** → Read `extensions/manifest-frontend-static/EXTENSION.md` and follow its install instructions exactly.
+- **Reactive** → Read `extensions/manifest-frontend-reactive/EXTENSION.md` and follow its install instructions exactly.
+
+The extension's `EXTENSION.md` has the complete steps: creating directories, copying templates, installing dependencies, creating config, and building. Follow it — don't improvise.
+
+After the extension is installed and built, tell the user:
+
+> Frontend is set up. Your pages live in `frontend/`, builds go to `dist/`, and the server serves them automatically after API routes. I'll verify everything works in the next step.
+
+### Step 4: Verify It Works
 
 Tell the user:
 
@@ -191,7 +229,27 @@ Show the user the JSON response. Then:
 
 > That response came from `features/HelloWorld.ts`. That file IS the feature — the route, the input, the logic, the metadata. Everything in one place. That's how every feature in your project will look.
 
-### Step 4: Orient Them
+**If a frontend was installed in Step 3**, also verify it:
+
+```bash
+# Build the frontend
+bun manifest frontend build
+
+# Start server again and check the frontend is served
+bun index.ts &
+SERVER_PID=$!
+sleep 1
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/
+kill $SERVER_PID 2>/dev/null
+```
+
+If the frontend build succeeds and the server returns 200 for `/`, tell the user:
+
+> Frontend is live at http://localhost:8080/ — your API and your pages, same server, no proxy. API routes take priority, static files fill in the rest.
+
+If anything fails, investigate and fix before moving on.
+
+### Step 5: Orient Them
 
 This is the one step where you DON'T do the work. The user needs to read.
 
@@ -202,11 +260,18 @@ This is the one step where you DON'T do the work. The user needs to read.
 > 3. `CLAUDE.md` — the conventions and rules for working in this project. This is how you (and any agent) should write code here.
 > 4. `features/HelloWorld.ts` — your first feature. This is the pattern everything follows.
 
+**If a frontend was installed in Step 3**, add to the reading list:
+
+> Also read:
+>
+> 5. `config/frontend.ts` — your frontend configuration. Entry point, output directory, source maps, SPA fallback.
+> 6. The extension's `EXTENSION.md` — either `extensions/manifest-frontend-static/EXTENSION.md` or `extensions/manifest-frontend-reactive/EXTENSION.md`. It explains how your frontend preset works, how to add pages, and how the build pipeline fits together.
+
 Give them a moment. Then:
 
 > Notice what's NOT here. No middleware. No decorators. No dependency injection. No file-system routing. No hidden behavior. If something happens, it's because a feature file says so.
 
-### Step 5: What They Want to Build
+### Step 6: What They Want to Build
 
 Go back to what the user said they're building in the beginning. Decide which path to take:
 
