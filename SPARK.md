@@ -133,9 +133,26 @@ Then do it yourself:
    gh repo rename [project-name] 2>/dev/null || true
    ```
 4. Run `bun install`
-5. **Write `VISION.md`** — this is the soul of their project.
+5. **Offer to write `VISION.md`** — this is the soul of their project, but don't force it.
 
-**VISION.md is critical.** Take what the user told you in Step 0 about what they're building and write a `VISION.md` file. This file is the single source of truth for *why this project exists* and *what it's building toward*. Every agent that touches this codebase will read it first.
+`VISION.md` is about *the app being built* — not about Manifest the framework. The forked repo ships with a placeholder. This step replaces that placeholder with the user's actual vision. **Replace the entire file** — don't append to the template comments.
+
+**Be proactive, not annoying.** The user already told you what they're building. Ask them:
+
+> There's a file called `VISION.md` — it's the first thing any agent reads when it starts working in your codebase. It's about your app: what it does, who it's for, where it's heading. I can write a first draft from what you've told me so far.
+>
+> How much thought do you want to put into this right now? I can:
+> 1. Write a quick draft from what you've already said — we move on in 30 seconds
+> 2. Ask you a couple of questions to get it dialed in
+> 3. Skip it — you can fill it in later whenever you want
+
+**If they pick 1** — write it from what you know. Keep it brief.
+
+**If they pick 2** — ask at most two questions: "What problem does this solve?" and "Who's it for?" Then write it.
+
+**If they pick 3** — move on. Don't mention it again. The placeholder stays.
+
+**If they don't explicitly pick** and just keep talking about their project — use your judgment. If you have enough context, write a quick draft and show it to them. If not, skip it.
 
 The file should be:
 - **Brief** — 3-5 sentences, never more than a short paragraph
@@ -154,11 +171,9 @@ Use this format:
 [Where it's heading — the north star, the end state, what success looks like — one sentence.]
 ```
 
-Don't over-engineer it. The user gave you a sentence about what they're building. Turn that into a clear, honest vision. If you need more to write it well, ask one question: **"What problem does this solve, and for who?"** — then write it.
+If you wrote it, tell the user:
 
-Tell the user:
-
-> I wrote `VISION.md` — it's the soul of your project. Every agent that works here reads it first to understand what they're building and why. As your project evolves, keep it updated. It should always reflect where you're heading, not where you started.
+> I wrote `VISION.md`. Every agent that works here reads it first. As your project evolves, keep it honest — it should reflect where you're heading, not where you started.
 
 Tell the user what you changed.
 
@@ -255,7 +270,7 @@ This is the one step where you DON'T do the work. The user needs to read.
 
 > Now read these four things. In this order. Don't skim.
 >
-> 1. `VISION.md` — the soul of your project. What you're building and why. This is the first thing any agent reads.
+> 1. `VISION.md` — your app's vision. What you're building and why. This is the first thing any agent reads. (If you skipped writing it earlier, that's fine — come back to it when you're ready.)
 > 2. `MANIFEST.md` — the index of everything in your project. Auto-generated. This is what an agent reads to orient itself.
 > 3. `CLAUDE.md` — the conventions and rules for working in this project. This is how you (and any agent) should write code here.
 > 4. `features/HelloWorld.ts` — your first feature. This is the pattern everything follows.

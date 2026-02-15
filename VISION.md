@@ -1,7 +1,23 @@
 # Vision
 
-Manifest is a TypeScript/Bun framework designed to be read, understood, and modified by AI agents. Every line of code — framework, features, schemas, services — is written as source you own and can change, not as a dependency you consume.
+<!-- 
+  This file is for YOUR APP — not for Manifest the framework.
+  
+  When you fork this repo and start building, replace this with what 
+  you're building and why. Spark can help you write it, or fill it in 
+  yourself anytime.
 
-The goal: a codebase where an agent can drop in cold, read the code, and build correctly without tribal knowledge. No hidden behavior, no magic conventions, no framework black boxes. Explicit, self-describing, and completely transparent.
+  Keep it brief: 3-5 sentences. What the project does, who it's for, 
+  where it's heading. Every agent that works in this codebase reads 
+  this first to understand the purpose behind the features they build.
 
-This repository is the blueprint. It ships as a fork — every project built with Manifest starts here and evolves into its own thing.
+  Example:
+  
+  Tidepool is a real-time ocean monitoring dashboard for marine 
+  biologists. It ingests sensor data from buoy networks, detects 
+  anomalies in temperature and salinity, and surfaces alerts when 
+  conditions threaten coral reef ecosystems.
+  
+  The goal is a single pane of glass that replaces the spreadsheet 
+  workflows most research stations use today.
+-->
