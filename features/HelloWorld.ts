@@ -1,5 +1,4 @@
-import { defineFeature } from '../manifest/feature'
-import { t } from '../manifest/types'
+import { defineFeature, t } from '../manifest'
 
 export default defineFeature({
   name: 'hello-world',
