@@ -114,7 +114,66 @@ export async function createManifestServer(options: ManifestServerOptions) {
           )
         }
 
-        // Execute
+        // Stream features return SSE responses
+        if (feature.type === 'stream') {
+          const stream = new ReadableStream({
+            async start(controller) {
+              let closed = false
+
+              const safeEnqueue = (chunk: string) => {
+                if (closed) return
+                try {
+                  controller.enqueue(new TextEncoder().encode(chunk))
+                } catch {
+                  closed = true
+                }
+              }
+
+              const emit: import('./feature').EmitFn = (...args: unknown[]) => {
+                if (args.length === 1) {
+                  const data = typeof args[0] === 'string' ? args[0] : JSON.stringify(args[0])
+                  safeEnqueue(`data: ${data}\n\n`)
+                } else {
+                  const event = args[0] as string
+                  const data = typeof args[1] === 'string' ? args[1] : JSON.stringify(args[1])
+                  safeEnqueue(`event: ${event}\ndata: ${data}\n\n`)
+                }
+              }
+
+              const close = () => {
+                if (closed) return
+                closed = true
+                try { controller.close() } catch {}
+              }
+
+              const fail = (message: string) => {
+                safeEnqueue(`event: error\ndata: ${JSON.stringify({ message })}\n\n`)
+                close()
+              }
+
+              // Initial meta event
+              safeEnqueue(`event: meta\ndata: ${JSON.stringify({ feature: feature.name, request_id: requestId })}\n\n`)
+
+              try {
+                await feature.stream({ input, emit, close, fail })
+                close()
+              } catch (err) {
+                const message = err instanceof Error ? err.message : 'Internal server error'
+                fail(message)
+              }
+            },
+          })
+
+          return new Response(stream, {
+            headers: {
+              'Content-Type': 'text/event-stream',
+              'Cache-Control': 'no-cache',
+              'Connection': 'keep-alive',
+            },
+          })
+        }
+
+        // Execute request features
         const helpers = createResultHelpers()
         const result = await feature.handle({ input, ok: helpers.ok, fail: helpers.fail })
         const durationMs = Math.round((performance.now() - start) * 100) / 100
