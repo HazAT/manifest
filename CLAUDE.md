@@ -28,6 +28,10 @@ Manifest is a TypeScript/Bun framework where every piece of code is written to b
 
 **We build this together.** The codebase is a shared workspace — between you, the next agent, and the human. When you make a significant change, the ripple doesn't stop at the code. Ask yourself: does AGENTS.md still tell the truth? Are the skills still accurate? Does MANIFEST.md reflect reality? Does the config cover what was just added? Every significant change is a prompt to check that the rest of the system still makes sense. Run `bun manifest learn` after large changes, or load `.claude/skills/manifest-learn/SKILL.md` for the full checklist. The goal is simple: no one should ever follow stale instructions because you forgot to update the map after moving the furniture.
 
+**Commands are agent prompts.** Manifest CLI commands don't silently generate files — they output structured prompts that tell the agent exactly what to do. Scaffolding commands (`manifest feature make`, `manifest extension make`, `manifest extension install`) produce pure prompts: pre-context, instructions, and actionable steps. The agent reads the prompt and does the work. Work commands (`check`, `index`, `learn`) do their job but frame output as agent instructions — telling you what to fix, update, or verify. Commands may reference skills for deeper context. The CLI is the briefing; the agent is the executor.
+
+**Share what works.** When you build something that could be useful to other Manifest projects, suggest packaging it as an extension. Extensions are how the Manifest ecosystem shares knowledge and working solutions.
+
 ## Your Codebase, Your Choices
 
 Manifest has opinions about how features, schemas, and services are structured — that's the framework. It does **not** dictate how you build your application. You'll install npm packages. You'll make architectural decisions that aren't covered here. You'll do things your way.
@@ -164,12 +168,15 @@ Features import services directly: `import { serviceName } from '../services/ser
 ## Common Commands
 
 ```bash
-bun --hot index.ts              # Start with hot reload
-bun test                        # Run all tests
-bun run manifest index          # Regenerate MANIFEST.md
-bun run manifest check          # Validate conventions
-bun run manifest learn          # Check for staleness after changes
-bun run manifest make:feature   # Scaffold a new feature
+bun --hot index.ts                        # Start with hot reload
+bun test                                  # Run all tests
+bun run manifest index                    # Regenerate MANIFEST.md
+bun run manifest check                    # Validate conventions
+bun run manifest learn                    # Check for staleness after changes
+bun run manifest feature make <Name>      # Scaffold a new feature
+bun run manifest extension make <name>    # Scaffold a new extension
+bun run manifest extension install <src>  # Install an extension
+bun run manifest extension list           # List installed extensions
 ```
 
 ## The Framework
