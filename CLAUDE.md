@@ -8,11 +8,11 @@ You are working on a Manifest project. Read this file completely before writing 
 
 ## What This Is
 
-Manifest is a TypeScript/Bun framework where every piece of code is written to be read, understood, and modified by AI agents. The framework ships as source code inside the project — not as an npm package. You can read every line of framework code in `manifest/` (~1,000 lines total).
+Manifest is a TypeScript/Bun framework where every piece of code is written to be read, understood, and modified by AI agents. The framework ships as source code inside the project — not as an npm package. You can read every line of framework code in `manifest/` (~1,700 lines total).
 
 ## Principles
 
-**Read every line you touch.** Before modifying a file, read it. Before calling a function, read its implementation. The framework is ~1,000 lines — you can read all of it. Don't guess what `createRouter()` does; open `manifest/router.ts` (76 lines) and know. This applies to agents and humans equally. If something needs your attention, read the source. The answers are in the code, not in assumptions.
+**Read every line you touch.** Before modifying a file, read it. Before calling a function, read its implementation. The framework is ~1,700 lines — you can read all of it. Don't guess what `createRouter()` does; open `manifest/router.ts` (76 lines) and know. This applies to agents and humans equally. If something needs your attention, read the source. The answers are in the code, not in assumptions.
 
 **Trust the defaults.** The framework has made deliberate choices: `defineFeature()` for behavior, `t.string()` for inputs, JSON envelopes for responses, `Bun.serve()` for HTTP. Lean into these patterns. Don't reach for Express middleware when `handle()` already solves it. Don't add a validation library when `manifest/validator.ts` already handles it. If a proven structure exists, use it.
 
@@ -181,19 +181,20 @@ bun run manifest extension list           # List installed extensions
 
 ## The Framework
 
-The framework lives in `manifest/`. It's ~1,000 lines total. Read it:
+The framework lives in `manifest/`. It's ~1,700 lines total. Read it:
 
 | File | Lines | What it does |
 |------|-------|-------------|
 | `types.ts` | 141 | Input type builders: `t.string()`, `t.integer()`, etc. |
 | `validator.ts` | 92 | Validates input against schema. Formats, lengths, ranges. |
 | `feature.ts` | 83 | `defineFeature()` and all feature types. |
-| `server.ts` | 109 | `Bun.serve()` wrapper. Route matching → validation → execution → envelope. |
+| `server.ts` | 107 | `Bun.serve()` wrapper. Route matching → validation → execution → envelope. |
 | `router.ts` | 76 | HTTP route matching with path parameters. |
 | `envelope.ts` | 65 | Response formatting. `ok()`, `fail()`, `toEnvelope()`. |
-| `scanner.ts` | 33 | Scans features directory, dynamically imports `.ts` files. |
+| `scanner.ts` | 60 | Scans features directory and extensions, dynamically imports `.ts` files. |
 | `testing.ts` | 73 | `createTestClient()` — call features by name without HTTP. |
-| `cli/` | 352 | CLI commands: serve, index, check, make:feature. |
+| `index.ts` | 31 | Barrel export for framework types and utilities. |
+| `cli/` | 1013 | CLI commands: serve, index, check, learn, make:feature, extension (make/install/list). |
 
 If something in the framework doesn't work for your use case, modify it. It's your code.
 
@@ -225,6 +226,38 @@ Errors include `errors` instead of `data`:
 }
 ```
 
+## How to Write an Extension
+
+Extensions are self-contained packages that add features, schemas, and services. Each extension has an `EXTENSION.md` with YAML frontmatter:
+
+```markdown
+---
+name: extension-name
+description: What this extension provides.
+version: 0.1.0
+author: Your Name
+features:
+  - feature-name: What this feature does.
+schemas:
+  - table_name: What this table stores.
+services:
+  - serviceName: What this service provides.
+config:
+  - CONFIG_KEY: What this config controls. (default: value)
+---
+
+# Extension Name
+
+Longer documentation, usage examples, and setup instructions.
+```
+
+Extension structure mirrors the project: `extensions/<name>/features/`, `extensions/<name>/schemas/`, `extensions/<name>/services/`. The scanner automatically picks up features from `extensions/*/features/`.
+
+Manage extensions with CLI commands:
+- `bun run manifest extension make <name>` — Scaffold a new extension
+- `bun run manifest extension install <src>` — Install from a source
+- `bun run manifest extension list` — List installed extensions
+
 ## Extensions
 
 Extensions live in `extensions/` and follow the same conventions. Each has an `EXTENSION.md`. The scanner picks up features from `extensions/*/features/`. Read an extension's `EXTENSION.md` before modifying it.
@@ -241,7 +274,7 @@ The skill walks you through reading upstream commits, understanding what changed
 
 ## When In Doubt
 
-1. Read the source. The framework is 1,000 lines. The answers are there.
+1. Read the source. The framework is 1,700 lines. The answers are there.
 2. Read `MANIFEST.md` — it's the index of everything.
 3. Read the feature file — it's self-contained.
 4. Run `bun run manifest check` — it validates conventions.
