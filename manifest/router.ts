@@ -1,14 +1,14 @@
-import type { FeatureDef, HttpMethod } from './feature'
+import type { AnyFeatureDef, HttpMethod } from './feature'
 
 interface RouteEntry {
   method: HttpMethod
   segments: string[]
   paramNames: string[]
-  feature: FeatureDef
+  feature: AnyFeatureDef
 }
 
 export interface RouteMatch {
-  feature: FeatureDef
+  feature: AnyFeatureDef
   params: Record<string, string>
 }
 
@@ -21,7 +21,7 @@ function splitPath(path: string): string[] {
   return path.split('/').filter(Boolean)
 }
 
-export function createRouter(registry: Record<string, FeatureDef>): Router {
+export function createRouter(registry: Record<string, AnyFeatureDef>): Router {
   const entries: RouteEntry[] = []
 
   for (const feature of Object.values(registry)) {

@@ -1,8 +1,8 @@
-import type { FeatureDef } from './feature'
+import type { AnyFeatureDef } from './feature'
 import { readdirSync, existsSync, statSync } from 'fs'
 import path from 'path'
 
-export type FeatureRegistry = Record<string, FeatureDef>
+export type FeatureRegistry = Record<string, AnyFeatureDef>
 
 export async function scanFeatures(featuresDir: string): Promise<FeatureRegistry> {
   const registry: FeatureRegistry = {}
@@ -20,7 +20,7 @@ export async function scanFeatures(featuresDir: string): Promise<FeatureRegistry
     const fullPath = path.resolve(featuresDir, file)
     try {
       const mod = await import(fullPath)
-      const feature = mod.default as FeatureDef | undefined
+      const feature = mod.default as AnyFeatureDef | undefined
       if (feature && typeof feature === 'object' && feature.name) {
         ;(feature as any)._sourcePath = path.relative(process.cwd(), fullPath)
         registry[feature.name] = feature
