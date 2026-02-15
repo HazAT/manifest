@@ -1,0 +1,12 @@
+{
+  "name": "manifest-drizzle-postgres",
+  "version": "0.1.0",
+  "description": "Drizzle ORM + Postgres extension for Manifest projects",
+  "dependencies": {
+    "drizzle-orm": "^0.38.0",
+    "postgres": "^3.4.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.30.0"
+  }
+}
