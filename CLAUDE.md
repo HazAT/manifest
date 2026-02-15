@@ -20,6 +20,8 @@ Manifest is a TypeScript/Bun framework where every piece of code is written to b
 
 **Self-describing code.** Every feature, service, and schema carries machine-readable metadata. Descriptions on every input field. JSDoc on every schema column. Side effects declared before the logic. The codebase is its own documentation.
 
+**Commits carry knowledge.** Every commit message should be descriptive enough that an agent reading `git log` understands what changed and why without looking at the diff. Use a clear subject line and a body that explains the reasoning, what files were affected, and any migration steps. For larger changes, point to a plan file. The commit history is how the local agent learns what happened while it wasn't watching — treat it as a knowledge transfer, not a formality.
+
 ## Your Codebase, Your Choices
 
 Manifest has opinions about how features, schemas, and services are structured — that's the framework. It does **not** dictate how you build your application. You'll install npm packages. You'll make architectural decisions that aren't covered here. You'll do things your way.
@@ -212,9 +214,20 @@ Errors include `errors` instead of `data`:
 
 Extensions live in `extensions/` and follow the same conventions. Each has an `EXTENSION.md`. The scanner picks up features from `extensions/*/features/`. Read an extension's `EXTENSION.md` before modifying it.
 
+## Updating from Upstream
+
+When the base Manifest repo adds new capabilities, don't blindly merge. Load the update skill:
+
+```
+Read and follow .claude/skills/manifest-update/SKILL.md
+```
+
+The skill walks you through reading upstream commits, understanding what changed, and applying updates intelligently — adapting to what your project has become rather than creating merge conflicts.
+
 ## When In Doubt
 
 1. Read the source. The framework is 1,000 lines. The answers are there.
 2. Read `MANIFEST.md` — it's the index of everything.
 3. Read the feature file — it's self-contained.
 4. Run `bun run manifest check` — it validates conventions.
+5. Read `git log` — the commit history explains what changed and why.
