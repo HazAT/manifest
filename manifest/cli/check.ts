@@ -42,6 +42,18 @@ export async function check(_args: string[]): Promise<number> {
       issues.push(`Feature '${name}' is type 'request' but has no route. → Add route: ['METHOD', '/api/path'] to defineFeature() in ${featureFile}.`)
     }
 
+    if (feature.type === 'stream') {
+      if (!(feature as any).stream) {
+        issues.push(`Feature '${name}' is type 'stream' but has no stream() function. → Add an async stream({ input, emit, close, fail }) function to defineFeature() in ${featureFile}.`)
+      }
+      if ((feature as any).handle) {
+        issues.push(`Feature '${name}' is type 'stream' but has a handle() function. Stream features must use stream() instead. → Replace handle() with stream() in ${featureFile}.`)
+      }
+      if (feature.route.length === 0) {
+        issues.push(`Feature '${name}' is type 'stream' but has no route. Stream features require a route. → Add route: ['GET', '/api/path'] to defineFeature() in ${featureFile}.`)
+      }
+    }
+
     for (const [fieldName, fieldDef] of Object.entries(feature.input)) {
       if (!fieldDef.description || fieldDef.description.trim().length === 0) {
         issues.push(`Feature '${name}' input field '${fieldName}' has no description. → Add a description to the '${fieldName}' input field in ${featureFile}.`)

@@ -11,27 +11,48 @@ export async function makeFeature(args: string[]): Promise<void> {
   const className = args[0]
 
   if (!className) {
-    console.error('  Usage: bun manifest make:feature <ClassName> [--route="METHOD /path"] [--auth=none|required]')
+    console.error('  Usage: bun manifest make:feature <ClassName> [--route="METHOD /path"] [--auth=none|required] [--type=stream]')
     process.exit(1)
   }
 
   let route = ''
   let auth = 'required'
+  let type = 'request'
 
   for (const arg of args.slice(1)) {
     if (arg.startsWith('--route=')) route = arg.slice(8).replace(/"/g, '')
     if (arg.startsWith('--auth=')) auth = arg.slice(7)
+    if (arg.startsWith('--type=')) type = arg.slice(7)
   }
 
   const kebabName = className
     .replace(/([a-z])([A-Z])/g, '$1-$2')
     .toLowerCase()
 
-  let routeLine = `route: ['GET', '/api/${kebabName}'],`
+  const defaultMethod = type === 'stream' ? 'GET' : 'GET'
+  let routeLine = `route: ['${defaultMethod}', '/api/${kebabName}'],`
   if (route) {
     const [method, ...pathParts] = route.split(' ')
     routeLine = `route: ['${method!.toUpperCase()}', '${pathParts.join(' ')}'],`
   }
+
+  const typeLine = type === 'stream' ? `\n  type: 'stream',` : ''
+
+  const handlerBlock = type === 'stream'
+    ? `async stream({ input, emit, close, fail }) {
+    // [FILL IN: Implement streaming logic.]
+    emit('Started streaming')
+    // emit('event-name', { data: 'value' })
+    // Stream auto-closes when this function returns
+  },`
+    : `async handle({ input, ok, fail }) {
+    // [FILL IN: Implement the feature logic. Keep it linear — no hidden branches.]
+    return ok('${className} executed')
+  },`
+
+  const fillInHandler = type === 'stream'
+    ? `5. **stream() logic** — Implement the streaming logic. Use \`emit()\` to send events, \`close()\` to end the stream early, \`fail()\` for errors. The stream auto-closes when the function returns.`
+    : `5. **handle() logic** — Implement the business logic. Use \`ok()\` for success, \`fail()\` for errors.`
 
   const prompt = `You are creating a new feature called '${kebabName}'.
 
@@ -42,7 +63,7 @@ Create the file \`features/${className}.ts\` with the following template:
 import { defineFeature, t } from '../manifest'
 
 export default defineFeature({
-  name: '${kebabName}',
+  name: '${kebabName}',${typeLine}
   description: \\\`[FILL IN: 2-3 sentences explaining what this feature does, why it exists,
                 and any important context. Write for an agent reading this cold.]\\\`,
   ${routeLine}
@@ -61,10 +82,7 @@ export default defineFeature({
     // email: t.string({ description: 'User email address for account creation.', required: true }),
   },
 
-  async handle({ input, ok, fail }) {
-    // [FILL IN: Implement the feature logic. Keep it linear — no hidden branches.]
-    return ok('${className} executed')
-  },
+  ${handlerBlock}
 })
 \`\`\`
 
@@ -74,7 +92,7 @@ export default defineFeature({
 2. **input fields** — Define every input field with \`t.string()\`, \`t.integer()\`, etc. Every field must have a \`description\`.
 3. **sideEffects** — List every side effect: database writes, emails, external API calls. Can be empty array if pure.
 4. **errorCases** — List every error case with HTTP status code, e.g. \`'422 - Validation failed'\`.
-5. **handle() logic** — Implement the business logic. Use \`ok()\` for success, \`fail()\` for errors.
+${fillInHandler}
 
 ## After creation
 
