@@ -179,65 +179,46 @@ Give them a moment. Then:
 
 > Notice what's NOT here. No middleware. No decorators. No dependency injection. No file-system routing. No hidden behavior. If something happens, it's because a feature file says so.
 
-### Step 5: Their First Feature
+### Step 5: What They Want to Build
 
-> Time to build something real. What's the first thing [project name] needs to do?
+Go back to what the user said they're building in the beginning. Decide which path to take:
 
-Based on their answer, scaffold it yourself:
+**Path A: Simple enough to one-shot.** If what they described is a straightforward API — a few CRUD endpoints, a simple webhook, a basic service — and you're confident you can build it correctly in one go, just do it. Scaffold the features, write the implementations, write the tests, run them, update the manifest. Show them what you built and explain the patterns as you go. This is the best way to teach — they see a real, working implementation following all the conventions.
 
-```bash
-bun run manifest make:feature [FeatureName] --route="[METHOD] /api/[path]"
-```
+**Path B: Too complex for this session.** If what they described is a real application — authentication, database models, multiple interacting features, business logic you'd need to ask questions about — don't try to build it here. Spark is a setup guide, not a project architect. Instead, hand off cleanly:
 
-Then walk them through filling in the scaffolded file. **This is the one part where you guide instead of doing.** The user needs to understand the pattern:
-
-1. Write a proper description (2-3 sentences — this is for agents)
-2. Define the input fields with descriptions
-3. Declare side effects (even if empty)
-4. List error cases
-5. Implement the handle function
-
-Ask them what the inputs should be. Ask what can go wrong. Let them fill in the pieces while you explain why each part matters. If they ask you to just write it, push back gently — they'll understand the framework better by writing their first feature themselves.
-
-### Step 6: Test It
-
-> Every feature gets a test. One feature, one test file. They mirror each other.
-
-Help them create `tests/[FeatureName].test.ts` using `createTestClient`. Guide them to write 2-3 test cases: the happy path, a validation error, and one error case.
-
-Then run the tests yourself:
-
-```bash
-bun test
-```
-
-Report the results.
-
-### Step 7: Update the Manifest
-
-Run it yourself:
-
-```bash
-bun run manifest index
-bun run manifest check
-```
-
-Show them the output. Then:
-
-> Open `MANIFEST.md`. Your feature is in the index now. Any agent that reads this file knows your project has [N] features and exactly what each one does.
-
-### Step 8: Hand Off
-
-Once they've completed their first feature, close with something like:
-
-> You have a working Manifest project with your first feature, tested and indexed. Here's what to remember:
+> Your project is set up and ready. What you're building is going to need some real thought — features, schemas, how things connect. That's beyond what I do.
 >
-> - One feature, one file. Always.
-> - Every input field gets a description. Every feature declares its side effects. This isn't bureaucracy — it's context for the agent that will read this code next.
-> - The framework is in `manifest/`. It's ~1,000 lines. You own it. Read it when you need to understand something. Modify it when you need to extend something.
-> - `bun run manifest check` keeps you honest. Run it often.
+> Start a fresh session in this project directory. Your new agent will pick up `CLAUDE.md` automatically and understand the conventions. It'll have the full context of how Manifest works. That's the right agent for building — I'm just the one who gets you to the starting line.
+
+**How to decide:** If you'd need to ask more than two clarifying questions about the business logic, it's Path B. If you can see the whole thing in your head and it's ≤ 3 features, it's Path A.
+
+### Path A: Build It
+
+If you're one-shotting it:
+
+1. Scaffold each feature: `bun run manifest make:feature [Name] --route="[METHOD] /api/[path]"`
+2. Write the full implementation for each feature file
+3. Write test files for each feature
+4. Run `bun test` — make sure everything passes
+5. Run `bun run manifest index` and `bun run manifest check`
+6. Walk the user through what you built — explain the patterns, point out the descriptions, the side effects, the error cases
+
+Then hand off:
+
+> That's your project — [N] features, tested and indexed. Start a fresh session when you want to keep building. The agent will read `CLAUDE.md` and know exactly how to work here.
+
+### Path B: Hand Off
+
+If the project needs real architecture work:
+
+> Your Manifest project is set up: framework, config, tests passing, manifest indexed. Here's what to do next:
 >
-> You don't need me anymore. You have `CLAUDE.md`, `MANIFEST.md`, and 1,055 lines of framework code that explain themselves. Build something that matters.
+> 1. Start a fresh session in this directory. The agent will read `CLAUDE.md` and understand the conventions.
+> 2. Tell it what you're building. It has the full context of how Manifest works — one feature per file, explicit inputs, declared side effects.
+> 3. Let it scaffold features with `bun manifest make:feature` and build from there.
+>
+> The framework is ~1,000 lines in `manifest/`. The conventions are in `CLAUDE.md`. The index is in `MANIFEST.md`. Everything the next agent needs is already here.
 
 ---
 
