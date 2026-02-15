@@ -197,13 +197,13 @@ When `sourceMaps: true` in `config/frontend.ts`, built files in `dist/` have `.m
 
 ```
 dist/
-  index-a1b2c3d4.js
-  index-a1b2c3d4.js.map
-  index-a1b2c3d4.css
-  index-a1b2c3d4.css.map
+  index.js
+  index.js.map
+  index.css
+  index.css.map
 ```
 
-When a frontend error occurs, the browser dev tools (and any error reporting) trace it back to the original file in `frontend/`, not the bundled output. This is how you debug frontend issues — the source map connects `dist/index-a1b2c3d4.js:142` back to `frontend/index.ts:28`.
+When a frontend error occurs, the browser dev tools (and any error reporting) trace it back to the original file in `frontend/`, not the bundled output. This is how you debug frontend issues — the source map connects `dist/index.js:142` back to `frontend/index.ts:28`.
 
 ---
 
@@ -255,10 +255,10 @@ your-project/
 │   └── frontend.ts       # Build configuration
 ├── dist/                  # Built output (gitignored)
 │   ├── index.html
-│   ├── index-[hash].js
-│   ├── index-[hash].js.map
-│   ├── index-[hash].css
-│   └── index-[hash].css.map
+│   ├── index.js
+│   ├── index.js.map
+│   ├── index.css
+│   └── index.css.map
 └── extensions/
     └── manifest-frontend-static/
         ├── EXTENSION.md

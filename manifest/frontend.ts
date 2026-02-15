@@ -39,7 +39,7 @@ export async function buildFrontend(projectDir: string): Promise<BuildResult> {
     target: 'browser',
     sourcemap: config.sourceMaps ? 'linked' : 'none',
     minify: isProd,
-    naming: '[dir]/[name]-[hash].[ext]',
+    naming: '[dir]/[name].[ext]',
   })
 
   copyPublicDir(projectDir, outDir)
@@ -86,9 +86,7 @@ export function createStaticHandler(distDir: string, options: { spaFallback: boo
     const file = Bun.file(filePath)
 
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-      const isHashed = /\-[a-f0-9]{8,}\.\w+$/.test(pathname)
-      const cacheControl = isHashed ? 'public, max-age=31536000, immutable' : 'no-cache'
-      return new Response(file, { headers: { 'Cache-Control': cacheControl } })
+      return new Response(file, { headers: { 'Cache-Control': 'no-cache' } })
     }
 
     if (options.spaFallback) {
