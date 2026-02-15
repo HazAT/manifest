@@ -52,7 +52,7 @@ export async function doctor(_args: string[]): Promise<number> {
   }
 
   // ── Config files ──
-  const configs = ['config/manifest.ts', 'config/database.ts']
+  const configs = ['config/manifest.ts']
   for (const cfg of configs) {
     const cfgPath = join(projectDir, cfg)
     if (existsSync(cfgPath)) {
@@ -246,13 +246,13 @@ export async function doctor(_args: string[]): Promise<number> {
   // ── Debugging tips ──
   console.log('  \x1b[1m── Debugging Tips ──\x1b[0m')
   console.log('')
-  console.log('  • Server won\'t start? → Read the error. Check config/manifest.ts, config/database.ts, and index.ts.')
+  console.log('  • Server won\'t start? → Read the error. Check config/manifest.ts and index.ts.')
   console.log('  • Feature returns 500? → The error is caught in manifest/server.ts. Add console.error in the catch block to see the real error.')
   console.log('  • Feature not found (404)? → Run `bun manifest index` and check MANIFEST.md for the route. Verify the feature file exports a default defineFeature().')
   console.log('  • Validation fails unexpectedly (422)? → Check the feature\'s input schema. Query params arrive as strings — use t.integer() or t.number() carefully with GET requests.')
   console.log('  • Import errors on startup? → A feature or service has a bad import. Run `bun run features/<File>.ts` directly to see the error.')
   console.log('  • Frontend serves stale content? → Run `bun manifest frontend build`. Check that dist/ was updated. Hard-refresh the browser.')
-  console.log('  • Database connection fails? → Check config/database.ts values. Verify the database is running: `pg_isready -h <host> -p <port>`.')
+  console.log('  • Database connection fails? → Check your DATABASE_URL environment variable. Verify the database is running: `pg_isready -h <host> -p <port>`.')
   console.log('  • Need to see all registered routes? → Run `bun manifest index` and read the Feature Index table in MANIFEST.md.')
   console.log('')
 
