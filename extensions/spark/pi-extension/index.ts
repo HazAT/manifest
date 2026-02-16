@@ -34,7 +34,7 @@ type SparkConfig = {
   environment: string
   eventsDir: string
   watch: { unhandledErrors: boolean; serverErrors: boolean; processErrors: boolean }
-  environments: Record<string, { tools: 'full' | 'readonly'; behavior: 'fix' | 'alert' }>
+  environments: Record<string, { tools: 'full'; behavior: 'fix' }>
   pause: { staleThresholdMinutes: number }
   debounce: { windowMs: number }
 }
@@ -117,7 +117,7 @@ export default function spark(pi: ExtensionAPI) {
         },
         environments: {
           development: { tools: 'full', behavior: 'fix' },
-          production: { tools: 'readonly', behavior: 'alert' },
+          production: { tools: 'full', behavior: 'fix' },
         },
         pause: { staleThresholdMinutes: 30 },
         debounce: { windowMs: 1000 },
@@ -228,15 +228,34 @@ You are Spark, a Manifest-aware AI sidekick. You run alongside a Manifest applic
 ## What You Do
 You receive events from the running application — errors, crashes, failures. You investigate, diagnose, and depending on your mode, either fix issues or report them.
 
-${profile.behavior === 'fix' ? `## Dev/Fix Mode (Active)
+${config.environment === 'production' ? `## Production Mode (Active)
+You have full tools and the authority to fix issues — but you are operating on a live system. Every action carries real consequences.
+
+**Before touching anything:**
+1. Read the relevant feature file and understand the full context
+2. Analyze the error thoroughly — check related services, schemas, config, recent commits
+3. Assess blast radius: what else could this change affect?
+4. Run \`bun run manifest spark pause 'fixing: [description]'\` before making changes
+
+**When fixing:**
+- Prefer the smallest, most surgical fix that resolves the issue
+- Never refactor in production — fix the bug, nothing more
+- If the fix is risky or ambiguous, explain your analysis and proposed fix to the user first
+- Test your understanding before writing code — read the failing path end to end
+- If you're uncertain about root cause, investigate more before acting
+
+**After fixing:**
+- Verify the fix resolves the original error
+- Run \`bun run manifest spark resume\` when done
+
+You are trusted with production access because the humans you work with are responsible engineers. Honor that trust by being deliberate, cautious, and transparent about what you're doing and why.
+` : `## Development Mode (Active)
 You have full coding tools. When an error comes in:
 1. Read the relevant feature file to understand context
 2. Analyze the error — check related services, schemas, config
 3. Run \`bun run manifest spark pause 'fixing: [description]'\` before making changes
 4. Fix the issue
 5. Run \`bun run manifest spark resume\` when done
-` : `## Prod/Alert Mode (Active)
-You are in read-only mode. Analyze errors, explain root causes, and suggest fixes — but do NOT modify code unless explicitly asked by the user.
 `}
 ## Coordination
 If a pause file exists (.spark/pause), another agent or developer is working. Buffer events and wait. If you're about to make changes yourself, always pause first.
@@ -332,14 +351,6 @@ You understand Manifest conventions: features are in features/, one file per beh
         // Delay injection slightly so startup message appears first
         setTimeout(() => injectEvents(events), 500)
       }
-    }
-
-    // Environment-aware tool restriction
-    if (profile.tools === 'readonly') {
-      const readonlyTools = pi.getAllTools()
-        .map(t => t.name)
-        .filter(name => ['read', 'mcp', 'todo', 'subagent', 'subagent_status'].includes(name))
-      pi.setActiveTools(readonlyTools)
     }
 
     // Start watcher

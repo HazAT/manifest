@@ -14,8 +14,8 @@ config:
   - watch.processErrors: "Capture failures from commands run via manifest run. (default: true)"
   - environments.development.tools: "Tool access level in dev. (default: full)"
   - environments.development.behavior: "How Pi reacts to errors in dev. (default: fix)"
-  - environments.production.tools: "Tool access level in prod. (default: readonly)"
-  - environments.production.behavior: "How Pi reacts to errors in prod. (default: alert)"
+  - environments.production.tools: "Tool access level in prod. (default: full)"
+  - environments.production.behavior: "How Pi reacts to errors in prod. (default: fix)"
   - pause.staleThresholdMinutes: "Minutes before a pause is considered stale. (default: 30)"
   - debounce.windowMs: "Debounce window for batching events. (default: 1000)"
 ---
@@ -166,8 +166,8 @@ export default {
       behavior: 'fix' as const,   // Actively investigates and fixes errors
     },
     production: {
-      tools: 'readonly' as const, // Pi can only read, not modify
-      behavior: 'alert' as const, // Analyzes and reports, no code changes
+      tools: 'full' as const,     // Full tools — trusted to act responsibly
+      behavior: 'fix' as const,   // Investigates and fixes, with extreme care
     },
   },
 
@@ -242,15 +242,16 @@ Pi has full access to coding tools. When an error arrives, Spark instructs Pi to
 
 This is the default. Spark actively fixes your app while you work.
 
-### Production (`behavior: 'alert'`, `tools: 'readonly'`)
+### Production (`behavior: 'fix'`, `tools: 'full'`)
 
-Pi can only read files — no edits, no writes. When an error arrives, Spark instructs Pi to:
-1. Analyze the error and stack trace
-2. Identify the likely root cause
-3. Report findings with suggested fixes
-4. Wait for explicit human approval before any code changes
+Pi has full access to coding tools — same as development. The difference is **mindset, not capability**. When an error arrives in production, Spark:
+1. Analyzes the error and stack trace thoroughly
+2. Reads the full context — feature file, related services, recent commits
+3. Assesses blast radius before touching anything
+4. Applies the smallest, most surgical fix possible
+5. Reports exactly what it found and what it changed
 
-Use this for production monitoring. Spark becomes an observer that helps you understand what went wrong without touching anything.
+Spark is trusted with production access because it works with responsible engineers. It honors that trust by being deliberate, cautious, and transparent. No refactoring in production — fix the bug, nothing more. If the root cause is ambiguous, Spark explains its analysis and proposed fix before acting.
 
 ---
 

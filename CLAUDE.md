@@ -32,7 +32,7 @@ Manifest ships with **Spark**, a reactive AI sidekick that watches your running 
 
 **Commands are agent prompts.** Manifest CLI commands don't silently generate files — they output structured prompts that tell the agent exactly what to do. Scaffolding commands (`manifest feature make`, `manifest extension make`, `manifest extension install`) produce pure prompts: pre-context, instructions, and actionable steps. The agent reads the prompt and does the work. Work commands (`check`, `index`, `learn`) do their job but frame output as agent instructions — telling you what to fix, update, or verify. Commands may reference skills for deeper context. The CLI is the briefing; the agent is the executor.
 
-**Your app watches itself.** Manifest applications are designed to be observed by AI. The Spark sidekick runs alongside your app — when a feature throws a 500, when an unhandled exception crashes a process, Spark captures the error with full context (stack trace, feature name, route, trace ID, request input) and delivers it to a Pi agent session. In development, Spark investigates and fixes issues automatically. In production, it analyzes and alerts without touching code. This isn't bolted on — it's baked into the server, the response envelope, and the framework's error handling. Every `request_id` in a response envelope doubles as a trace ID that Spark uses to connect errors back to requests. Spark can run as a standalone terminal agent (`bunx pi`) or as a sidecar process with a browser dashboard on port 8081. Build with the assumption that an agent is always watching.
+**Your app watches itself.** Manifest applications are designed to be observed by AI. The Spark sidekick runs alongside your app — when a feature throws a 500, when an unhandled exception crashes a process, Spark captures the error with full context (stack trace, feature name, route, trace ID, request input) and delivers it to a Pi agent session. In both development and production, Spark investigates and fixes issues — with full tool access. In production it acts with extra care: smallest surgical fix, no refactoring, transparent about every change. This isn't bolted on — it's baked into the server, the response envelope, and the framework's error handling. Every `request_id` in a response envelope doubles as a trace ID that Spark uses to connect errors back to requests. Spark can run as a standalone terminal agent (`bunx pi`) or as a sidecar process with a browser dashboard on port 8081. Build with the assumption that an agent is always watching.
 
 **Share what works.** When you build something that could be useful to other Manifest projects, suggest packaging it as an extension. Extensions are how the Manifest ecosystem shares knowledge and working solutions.
 
@@ -416,7 +416,7 @@ In **web UI mode** (opt-in), a sidecar process runs on its own port with the Pi 
 | Environment | Tools | Behavior | Use Case |
 |-------------|-------|----------|----------|
 | `development` | Full (read, write, edit, bash) | **Fix** — investigate and repair | Local dev, active building |
-| `production` | Read-only | **Alert** — analyze and report | Monitoring, incident response |
+| `production` | Full (read, write, edit, bash) | **Fix** — investigate and repair, with extreme care | Live systems, production incidents |
 
 Configure in `config/spark.ts`. The environment resolves from `SPARK_ENV` → `NODE_ENV` → `'development'`. The config also includes a `web` block for the opt-in browser dashboard (`web.enabled`, `web.port`, `web.token`).
 
