@@ -45,6 +45,9 @@ export default function spark(pi: ExtensionAPI) {
   let config: SparkConfig | undefined
   let paused = false
   let bufferedEvents: SparkEvent[] = []
+  let sessionCtx: any | undefined
+  let ambientTimer: ReturnType<typeof setTimeout> | undefined
+  let agentsWatcher: fs.FSWatcher | undefined
 
   // Role detection — sidecar mode skips all agent presence behavior
   const isSidecar = process.env.SPARK_ROLE === 'sidecar'
@@ -226,13 +229,41 @@ export default function spark(pi: ExtensionAPI) {
       return
     }
 
-    injectEvents(filtered)
+    if (isSidecar) {
+      injectEvents(filtered)
+    } else {
+      showAmbientEvents(filtered)
+    }
   }
 
   function injectEvents(events: SparkEvent[]) {
     if (events.length === 0) return
     const message = formatBatch(events)
     pi.sendUserMessage(message, { deliverAs: 'followUp' })
+  }
+
+  function showAmbientStatus(message: string) {
+    if (!sessionCtx) return
+    if (ambientTimer) clearTimeout(ambientTimer)
+    sessionCtx.ui.setStatus('spark-activity', message)
+    ambientTimer = setTimeout(() => {
+      ambientTimer = undefined
+      sessionCtx?.ui.setStatus('spark-activity', undefined)
+    }, 5000)
+  }
+
+  function showAmbientEvents(events: SparkEvent[]) {
+    if (events.length === 0) return
+    if (events.length === 1) {
+      const e = events[0]!
+      if (e.type === 'rate-limit') {
+        showAmbientStatus(`⚡ Rate limit hit on ${e.feature || 'unknown'}`)
+      } else {
+        showAmbientStatus(`⚡ Spark caught a ${e.status || 500} in ${e.feature || 'unknown'}`)
+      }
+    } else {
+      showAmbientStatus(`⚡ ${events.length} errors — Spark is watching`)
+    }
   }
 
   function startWatcher(eventsDir: string, debounceMs: number) {
@@ -333,6 +364,7 @@ You understand Manifest conventions: features are in features/, one file per beh
 
   // Startup sequence
   pi.on('session_start', async (_event, ctx) => {
+    sessionCtx = ctx
     config = await readConfig(ctx.cwd)
     if (!config || !config.enabled) return
 
@@ -417,14 +449,36 @@ You understand Manifest conventions: features are in features/, one file per beh
       await cleanFiles(recent)
       if (paused) {
         bufferedEvents.push(...events)
-      } else {
+      } else if (isSidecar) {
         // Delay injection slightly so startup message appears first
         setTimeout(() => injectEvents(events), 500)
+      } else {
+        // Human mode: ambient status for pending events
+        const nonAgent = events.filter(e => !e.type.startsWith('agent-'))
+        if (nonAgent.length > 0) setTimeout(() => showAmbientEvents(nonAgent), 500)
       }
     }
 
     // Start watcher
     startWatcher(eventsDir, config.debounce.windowMs)
+
+    // Watch other agents (human mode only)
+    if (!isSidecar) {
+      const agentsDir = path.resolve(ctx.cwd, '.spark', 'agents')
+      try {
+        agentsWatcher = fs.watch(agentsDir, (_eventType, filename) => {
+          if (!filename?.endsWith('.json') || !agentId) return
+          // Filter out own agent file
+          if (filename === `${agentId}.json`) return
+          const filePath = path.join(agentsDir, filename)
+          // Check if file exists (create) or was removed (delete)
+          fsp.access(filePath).then(
+            () => showAmbientStatus('🤖 Another agent joined'),
+            () => showAmbientStatus('👋 Agent left')
+          )
+        })
+      } catch {}
+    }
 
     // Footer status
     ctx.ui.setStatus('spark', sparkStatus(config, paused))
@@ -440,6 +494,10 @@ You understand Manifest conventions: features are in features/, one file per beh
       }
     }
 
+    if (agentsWatcher) {
+      agentsWatcher.close()
+      agentsWatcher = undefined
+    }
     if (watcher) {
       watcher.close()
       watcher = undefined
@@ -448,5 +506,10 @@ You understand Manifest conventions: features are in features/, one file per beh
       clearTimeout(debounceTimer)
       debounceTimer = undefined
     }
+    if (ambientTimer) {
+      clearTimeout(ambientTimer)
+      ambientTimer = undefined
+    }
+    sessionCtx = undefined
   })
 }
