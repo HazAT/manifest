@@ -90,10 +90,12 @@ export default function spark(pi: ExtensionAPI) {
   }
 
   function formatBatch(events: SparkEvent[]): string {
-    if (events.length === 1) return `🔥 **Spark Event**\n\n${formatEvent(events[0]!)}`
+    // Embed raw JSON so web UI can render structured cards
+    const jsonBlock = '\n\n```spark-events\n' + JSON.stringify(events) + '\n```'
+    if (events.length === 1) return `🔥 **Spark Event**\n\n${formatEvent(events[0]!)}${jsonBlock}`
     const header = `🔥 **${events.length} Spark Events**\n`
     const body = events.map((e, i) => `### Event ${i + 1}\n${formatEvent(e)}`).join('\n\n')
-    return `${header}\n${body}`
+    return `${header}\n${body}${jsonBlock}`
   }
 
   async function readConfig(cwd: string): Promise<SparkConfig | undefined> {
