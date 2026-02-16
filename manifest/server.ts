@@ -8,6 +8,33 @@ import { createStaticHandler, watchFrontend } from './frontend'
 import frontendConfig from '../config/frontend'
 import manifestConfig from '../config/manifest'
 
+async function emitSparkError(opts: {
+  requestId: string
+  featureName: string
+  route: string
+  error: unknown
+  input: Record<string, unknown>
+}) {
+  try {
+    const sparkConfig = (await import('../config/spark')).default
+    if (sparkConfig.enabled && sparkConfig.watch.serverErrors) {
+      const { spark } = await import('../extensions/spark/services/spark')
+      spark.emit({
+        type: 'server-error',
+        traceId: opts.requestId,
+        feature: opts.featureName,
+        route: opts.route,
+        status: 500,
+        error: {
+          message: opts.error instanceof Error ? opts.error.message : String(opts.error),
+          stack: opts.error instanceof Error ? opts.error.stack : undefined,
+        },
+        request: { input: opts.input },
+      })
+    }
+  } catch {} // Spark emission must never break the server
+}
+
 export interface ManifestServerOptions {
   projectDir: string
   port?: number
@@ -72,9 +99,10 @@ export async function createManifestServer(options: ManifestServerOptions) {
       const requestId = crypto.randomUUID()
       const start = performance.now()
 
+      const input: Record<string, unknown> = {}
+
       try {
         // Parse input from query params + JSON body + path params
-        const input: Record<string, unknown> = {}
 
         // Query params
         for (const [key, value] of url.searchParams) {
@@ -160,24 +188,7 @@ export async function createManifestServer(options: ManifestServerOptions) {
               } catch (err) {
                 const message = err instanceof Error ? err.message : 'Internal server error'
                 fail(message)
-                try {
-                  const sparkConfig = (await import('../config/spark')).default
-                  if (sparkConfig.enabled && sparkConfig.watch.serverErrors) {
-                    const { spark } = await import('../extensions/spark/services/spark')
-                    spark.emit({
-                      type: 'server-error',
-                      traceId: requestId,
-                      feature: feature.name,
-                      route: `${method} ${pathname}`,
-                      status: 500,
-                      error: {
-                        message: err instanceof Error ? err.message : String(err),
-                        stack: err instanceof Error ? err.stack : undefined,
-                      },
-                      request: { input },
-                    })
-                  }
-                } catch {} // Spark emission must never break the server
+                await emitSparkError({ requestId, featureName: feature.name, route: `${method} ${pathname}`, error: err, input })
               }
             },
           })
@@ -200,24 +211,7 @@ export async function createManifestServer(options: ManifestServerOptions) {
         return Response.json(envelope, { status: result.status })
       } catch (err) {
         const durationMs = Math.round((performance.now() - start) * 100) / 100
-        try {
-          const sparkConfig = (await import('../config/spark')).default
-          if (sparkConfig.enabled && sparkConfig.watch.serverErrors) {
-            const { spark } = await import('../extensions/spark/services/spark')
-            spark.emit({
-              type: 'server-error',
-              traceId: requestId,
-              feature: feature.name,
-              route: `${method} ${pathname}`,
-              status: 500,
-              error: {
-                message: err instanceof Error ? err.message : String(err),
-                stack: err instanceof Error ? err.stack : undefined,
-              },
-              request: { input },
-            })
-          }
-        } catch {} // Spark emission must never break the server
+        await emitSparkError({ requestId, featureName: feature.name, route: `${method} ${pathname}`, error: err, input })
         return Response.json(
           {
             status: 500,
