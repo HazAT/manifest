@@ -148,7 +148,12 @@ export function createStaticHandler(distDir: string, options: { spaFallback: boo
     const file = Bun.file(filePath)
 
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-      return new Response(file, { headers: { 'Cache-Control': 'no-cache' } })
+      const headers: Record<string, string> = { 'Cache-Control': 'no-cache' }
+      const mimeType = file.type
+      if (mimeType && mimeType.startsWith('text/') && !mimeType.includes('charset')) {
+        headers['Content-Type'] = `${mimeType}; charset=utf-8`
+      }
+      return new Response(file, { headers })
     }
 
     // Directory → index.html resolution
