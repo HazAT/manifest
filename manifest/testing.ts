@@ -62,7 +62,7 @@ export function createTestClient(options: {
 
       const { ok, fail } = createResultHelpers()
       if (feature.type === 'stream') {
-        throw new Error(`Feature '${name}' is a stream feature. Use client.stream() instead of client.call().`)
+        throw new Error(`Feature '${featureName}' is a stream feature. Use client.stream() instead of client.call().`)
       }
       const result = await feature.handle({ input, ok, fail })
 
