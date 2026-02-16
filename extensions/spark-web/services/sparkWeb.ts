@@ -14,6 +14,7 @@ export interface SparkWebConfig {
     enabled: boolean
     path: string
     token: string
+    extensions?: string[]
   }
   projectDir: string
 }
@@ -86,6 +87,7 @@ export async function createSparkWeb(config: SparkWebConfig): Promise<{
       createAgentSession,
       DefaultResourceLoader,
       SessionManager,
+      SettingsManager,
       AuthStorage,
       ModelRegistry,
       createCodingTools,
@@ -94,12 +96,25 @@ export async function createSparkWeb(config: SparkWebConfig): Promise<{
     const cwd = config.projectDir
     const sparkExtensionPath = path.resolve(cwd, 'extensions/spark/pi-extension/index.ts')
 
+    // Separate local paths from package sources (npm/git)
+    const isPackageSource = (s: string) =>
+      s.startsWith('npm:') || s.startsWith('git:') || s.startsWith('https://') || s.startsWith('http://') || s.startsWith('ssh://')
+
+    const userExtensions = config.web.extensions || []
+    const localPaths = userExtensions.filter(e => !isPackageSource(e)).map(e => path.resolve(cwd, e))
+    const packageSources = userExtensions.filter(isPackageSource)
+
     const authStorage = new AuthStorage()
     const modelRegistry = new ModelRegistry(authStorage)
 
+    const settingsManager = packageSources.length > 0
+      ? SettingsManager.inMemory({ packages: packageSources })
+      : undefined
+
     const loader = new DefaultResourceLoader({
       cwd,
-      additionalExtensionPaths: [sparkExtensionPath],
+      ...(settingsManager ? { settingsManager } : {}),
+      additionalExtensionPaths: [sparkExtensionPath, ...localPaths],
     })
     await loader.reload()
 

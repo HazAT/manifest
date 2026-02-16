@@ -86,6 +86,35 @@ Type messages in the input box to interact with Spark. It's a full Pi agent — 
 
 ---
 
+## Loading Additional Extensions
+
+You can load additional Pi extensions into the Spark agent session via the `web.extensions` config array. The Spark core extension (`extensions/spark/pi-extension/index.ts`) is always loaded automatically — you don't need to include it.
+
+Three source types are supported:
+
+| Type | Example | Resolution |
+|------|---------|------------|
+| Local path | `'./extensions/my-tool/index.ts'` | Resolved relative to project root |
+| npm package | `'npm:@someone/pi-search-tool@1.0.0'` | Installed and loaded via Pi's SettingsManager |
+| Git repo | `'git:github.com/user/pi-extensions@main'` or `'https://github.com/user/pi-tools'` | Cloned and loaded via Pi's SettingsManager |
+
+Example configuration in `config/spark.ts`:
+
+```typescript
+web: {
+  enabled: true,
+  path: '/_spark',
+  token: Bun.env.SPARK_WEB_TOKEN || '',
+  extensions: [
+    './extensions/my-custom-tool/index.ts',
+    'npm:@someone/pi-search-tool@1.0.0',
+    'https://github.com/user/pi-tools',
+  ],
+},
+```
+
+---
+
 ## Architecture
 
 The `sparkWeb` service (`extensions/spark-web/services/sparkWeb.ts`) does three things:

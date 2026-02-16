@@ -293,7 +293,7 @@ Instead of a second terminal, you can run Spark embedded in the server with a br
 2. Start the app: `bun --hot index.ts` (no second terminal needed)
 3. Open `http://localhost:8080/_spark/?token=your-token`
 
-The web UI uses the Pi SDK to run an agent session in-process — same Spark extension, same error watching, same behavior. See `extensions/spark-web/EXTENSION.md` for full docs.
+The web UI uses the Pi SDK to run an agent session in-process — same Spark extension, same error watching, same behavior. You can load additional Pi extensions into the Spark agent via the `web.extensions` config array in `config/spark.ts` — supports local paths, npm packages, and git repos. See `extensions/spark-web/EXTENSION.md` for full docs.
 
 ## The Framework
 
