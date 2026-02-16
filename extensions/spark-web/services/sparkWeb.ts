@@ -7,7 +7,6 @@ import crypto from 'crypto'
  */
 export interface SparkSidecarConfig {
   environment: string
-  eventsDir: string
   web: { port: number; token: string; extensions?: string[] }
   projectDir: string
 }
@@ -179,7 +178,7 @@ export async function startSparkSidecar(config: SparkSidecarConfig): Promise<voi
           if (!reqToken || !safeTokenCompare(reqToken, token)) {
             return new Response('Unauthorized', { status: 401 })
           }
-          const upgraded = server.upgrade(req, { data: { token: reqToken } })
+          const upgraded = server.upgrade(req, { data: { token: reqToken } } as any)
           if (upgraded) return undefined as any
           return new Response('WebSocket upgrade failed', { status: 500 })
         }
@@ -280,7 +279,6 @@ if (import.meta.main) {
   }
   await startSparkSidecar({
     environment: sparkConfig.environment,
-    eventsDir: sparkConfig.eventsDir,
     web: sparkConfig.web,
     projectDir: path.resolve(__dirname, '../../..'),
   })
