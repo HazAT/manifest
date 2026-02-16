@@ -199,6 +199,60 @@ Without this, Tailwind CLI won't find utility classes in generated HTML and will
 
 ---
 
+## Advanced Configuration
+
+These options in `config/frontend.ts` control how the build pipeline works. You don't need them for basic usage — they exist for projects with custom build steps.
+
+### `bundleCss`
+
+By default, Bun's bundler processes CSS imports in your entry point and outputs `dist/index.css`. This works great when Tailwind is handled inline by Bun.
+
+But if you run Tailwind CLI as a separate step (e.g., to use the `@tailwindcss/typography` plugin), the bundler's CSS output **overwrites** the CLI's output on every rebuild. Set `bundleCss: false` to prevent this:
+
+```typescript
+export default {
+  entryPoint: 'frontend/index.ts',
+  outputDir: 'dist',
+  bundleCss: false,
+}
+```
+
+When `bundleCss` is `false`, Bun still bundles your TypeScript — it just skips CSS output entirely, leaving CSS to your external tool.
+
+### `postBuild`
+
+A shell command that runs after each frontend build. It runs in both `bun manifest frontend build` and the dev watcher, so your post-processing stays in sync during development.
+
+```typescript
+export default {
+  entryPoint: 'frontend/index.ts',
+  outputDir: 'dist',
+  postBuild: 'bunx @tailwindcss/cli -i frontend/styles.css -o dist/index.css --minify',
+}
+```
+
+Use cases: Tailwind CLI, blog generators, image optimization, any post-processing that needs to run after the bundle.
+
+### `watchDirs`
+
+Additional directories for the dev watcher to monitor. Changes in these directories trigger a full rebuild including `postBuild`. By default, only `frontend/` is watched.
+
+```typescript
+export default {
+  entryPoint: 'frontend/index.ts',
+  outputDir: 'dist',
+  watchDirs: ['content/'],
+}
+```
+
+This is useful when content or templates live outside `frontend/` — for example, a blog with markdown files in `content/`.
+
+### Real-world example
+
+The `manifest-content-blog` extension uses all three options together: `bundleCss: false` to let Tailwind CLI handle CSS with the typography plugin, `postBuild` to run the blog build and Tailwind CLI, and `watchDirs: ['content/']` to rebuild when markdown files change. See that extension's EXTENSION.md for the full setup.
+
+---
+
 ## How Source Maps Work
 
 When `sourceMaps: true` in `config/frontend.ts`, built files in `dist/` have `.map` files alongside them:
@@ -280,6 +334,12 @@ When the frontend isn't working, run through these checks in order.
 1. Check that files are in `frontend/public/`, not `frontend/` directly.
 2. Run `bun manifest frontend build` and check that files appear in `dist/`.
 3. Reference assets with absolute paths (`/images/logo.png`), not relative (`images/logo.png`).
+
+### Dev watcher overwrites my CSS
+
+1. **Symptom:** CSS styles disappear or revert after saving a file in `frontend/`.
+2. **Cause:** Bun's bundler re-outputs `dist/index.css` on each rebuild, overwriting the CSS that Tailwind CLI (or another external tool) produced.
+3. **Fix:** Set `bundleCss: false` in `config/frontend.ts`. This tells the bundler to skip CSS output entirely, leaving `dist/index.css` to your external tool. Use `postBuild` to run your CSS tool after each build.
 
 ### SPA routing returns 404
 

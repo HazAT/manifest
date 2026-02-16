@@ -239,10 +239,20 @@ Then briefly start the server to verify it responds. **Redirect output to `/dev/
 # Start server in background, silencing output so it doesn't hang
 bun index.ts > /dev/null 2>&1 &
 SERVER_PID=$!
-sleep 2
+
+# Wait for server to be ready (up to 15 seconds)
+for i in $(seq 1 30); do
+  if curl -sf http://localhost:8080/__health > /dev/null 2>&1; then
+    break
+  fi
+  sleep 0.5
+done
+
 curl -s http://localhost:8080/api/hello?name=World
 kill $SERVER_PID 2>/dev/null
 ```
+
+> The `/__health` endpoint is always available — agents use it to know when the server is ready instead of guessing with `sleep`.
 
 Show the user the JSON response. Then:
 
@@ -257,7 +267,15 @@ bun manifest frontend build
 # Start server and check the frontend is served
 bun index.ts > /dev/null 2>&1 &
 SERVER_PID=$!
-sleep 2
+
+# Wait for server to be ready (up to 15 seconds)
+for i in $(seq 1 30); do
+  if curl -sf http://localhost:8080/__health > /dev/null 2>&1; then
+    break
+  fi
+  sleep 0.5
+done
+
 curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/
 kill $SERVER_PID 2>/dev/null
 ```

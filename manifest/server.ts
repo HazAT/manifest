@@ -55,12 +55,21 @@ export async function createManifestServer(options: ManifestServerOptions) {
   // Live reload SSE clients (dev mode only)
   const reloadClients = new Set<ReadableStreamDefaultController>()
 
-  const server = Bun.serve({
-    port: options.port ?? 3000,
+  const requestedPort = options.port ?? 3000
+
+  let server: ReturnType<typeof Bun.serve>
+  try {
+    server = Bun.serve({
+    port: requestedPort,
     fetch: async (req) => {
       const url = new URL(req.url)
       const method = req.method
       const pathname = url.pathname
+
+      // Health check endpoint (no auth required)
+      if (pathname === '/__health') {
+        return Response.json({ status: 'ok', uptime: Math.round(process.uptime()) })
+      }
 
       // Dev-only SSE endpoint for live reload
       if (pathname === '/__dev/reload' && manifestConfig.debug && frontendConfig.devReload) {
@@ -223,6 +232,15 @@ export async function createManifestServer(options: ManifestServerOptions) {
       }
     },
   })
+  } catch (err: any) {
+    if (err?.code === 'EADDRINUSE' || err?.message?.includes('address already in use') || err?.errno === -48) {
+      console.error(`\n⚠ Port ${requestedPort} is already in use.`)
+      console.error(`  Check what's using it: lsof -i :${requestedPort}`)
+      console.error(`  Or use a different port: PORT=${requestedPort + 1} bun --hot index.ts\n`)
+      process.exit(1)
+    }
+    throw err
+  }
 
   const notifyReload = () => {
     for (const client of reloadClients) {

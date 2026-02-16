@@ -61,9 +61,9 @@ bun add -d @tailwindcss/cli @tailwindcss/typography
 - `@tailwindcss/cli` — standalone Tailwind CLI (runs after blog build to scan generated HTML)
 - `@tailwindcss/typography` — the `prose` class for styled article content
 
-### 6. Disable HTML copying
+### 6. Configure the build pipeline
 
-In `config/frontend.ts`, add `copyHtml: false`:
+Replace the contents of `config/frontend.ts` with:
 
 ```typescript
 export default {
@@ -73,33 +73,34 @@ export default {
   spaFallback: false,
   devReload: true,
   copyHtml: false,
+  bundleCss: false,
+  postBuild: 'bun run scripts/build-blog.ts && bunx @tailwindcss/cli -i frontend/styles.css -o dist/index.css -p @tailwindcss/typography',
+  watchDirs: ['content/'],
 }
 ```
 
-The blog build script generates all HTML files. Setting `copyHtml: false` prevents the frontend build from copying `frontend/*.html` into `dist/` and overwriting them.
+Blog-specific options explained:
 
-Also set `spaFallback: false` — the blog is a multi-page site, not a single-page app.
+- **`spaFallback: false`** — the blog is a multi-page site, not a single-page app.
+- **`copyHtml: false`** — the blog build script generates all HTML files. Without this, the frontend build copies `frontend/*.html` into `dist/` and overwrites them.
+- **`bundleCss: false`** — Tailwind CLI generates the CSS, not Bun's bundler. Without this, the dev watcher's CSS bundling step overwrites Tailwind CLI's output, breaking all styling.
+- **`postBuild`** — runs after every frontend build (including during dev). First builds the blog HTML from markdown, then runs Tailwind CLI to generate CSS from the built HTML. This replaces the manual three-step build pipeline.
+- **`watchDirs: ['content/']`** — watches the content directory so that editing or adding blog posts triggers a rebuild automatically during dev mode.
 
-### 7. Set up the build pipeline
+### 7. Set up build scripts
 
 Add these scripts to `package.json`:
 
 ```json
 {
   "scripts": {
-    "build": "bun manifest frontend build && bun run scripts/build-blog.ts && bunx @tailwindcss/cli -i frontend/styles.css -o dist/index.css -p @tailwindcss/typography",
+    "build": "bun manifest frontend build",
     "dev": "bun --hot index.ts"
   }
 }
 ```
 
-The build pipeline runs three steps in order:
-
-1. **`bun manifest frontend build`** — Bundles TypeScript and CSS into `dist/`
-2. **`bun run scripts/build-blog.ts`** — Reads markdown, generates HTML pages in `dist/`
-3. **`bunx @tailwindcss/cli ...`** — Scans all generated HTML for Tailwind classes and rebuilds CSS with typography plugin
-
-The order matters. Tailwind CLI runs last so it can scan the HTML that the blog script generated.
+That's it — the `postBuild` config from step 6 handles the blog build and Tailwind CSS automatically. Every time `bun manifest frontend build` runs, it bundles the JS, then executes `postBuild` which builds the blog HTML and generates the CSS. No manual multi-step pipeline needed.
 
 ### 8. Build and verify
 
@@ -173,26 +174,44 @@ bun run build
 
 ## How the Build Pipeline Works
 
+A single command — `bun manifest frontend build` — runs the entire pipeline:
+
 ```
-content/posts/*.md          frontend/styles.css
-       │                           │
-       ▼                           │
-  build-blog.ts                    │
-  (markdown → HTML)                │
-       │                           │
-       ▼                           ▼
-    dist/*.html ──────────→ Tailwind CLI
-                           (scans HTML for classes)
-                                   │
-                                   ▼
-                            dist/index.css
+bun manifest frontend build
+       │
+       ▼
+  1. Bun.build (JS only, bundleCss: false)
+       │
+       ▼
+  2. postBuild runs automatically:
+       │
+       ├─→ build-blog.ts (content/posts/*.md → dist/*.html)
+       │
+       └─→ Tailwind CLI (scans dist/*.html → dist/index.css)
 ```
 
-1. **Frontend build** (`bun manifest frontend build`) — bundles your TypeScript entry point and copies static assets from `frontend/public/` to `dist/`.
+1. **JS bundle** — Bun bundles your TypeScript entry point into `dist/`. CSS is skipped (`bundleCss: false`) because Tailwind CLI handles it.
 
-2. **Blog build** (`bun run scripts/build-blog.ts`) — reads every `.md` file in `content/posts/`, parses frontmatter, converts markdown to HTML with `marked`, and writes complete HTML pages to `dist/`. Generates the index page (all posts sorted by date), individual post pages with prev/next navigation, and an about page.
+2. **Blog build** (via `postBuild`) — reads every `.md` file in `content/posts/`, parses frontmatter, converts markdown to HTML with `marked`, and writes complete HTML pages to `dist/`. Generates the index page (all posts sorted by date), individual post pages with prev/next navigation, and an about page.
 
-3. **Tailwind CLI** (`bunx @tailwindcss/cli -i frontend/styles.css -o dist/index.css -p @tailwindcss/typography`) — scans all files in `dist/` for Tailwind utility classes and generates the final CSS. The `@tailwindcss/typography` plugin provides the `prose` class used for article body styling.
+3. **Tailwind CLI** (via `postBuild`) — scans all files in `dist/` for Tailwind utility classes and generates the final CSS. The `@tailwindcss/typography` plugin provides the `prose` class used for article body styling.
+
+---
+
+## How Dev Mode Works
+
+```bash
+bun --hot index.ts
+```
+
+This starts the Manifest server, which:
+
+1. **Runs the full build pipeline** on startup (JS bundle → blog HTML → Tailwind CSS via `postBuild`).
+2. **Watches `frontend/` and `content/`** for changes. The `content/` directory is watched because of the `watchDirs: ['content/']` config.
+3. **Rebuilds on any change** — editing a blog post, changing a TypeScript file, or updating styles all trigger the same pipeline.
+4. **Live reloads the browser** automatically after each rebuild (`devReload: true`).
+
+The `/__health` endpoint at `http://localhost:PORT/__health` returns `200` when the server is ready — useful for scripts or agents that need to wait for startup.
 
 ---
 
@@ -298,17 +317,18 @@ bun add marked
 
 ### Build order issues — HTML missing or CSS empty
 
-The three build steps must run in order. If you run them separately, make sure:
+With `postBuild` configured (step 6), build order is handled automatically — `bun manifest frontend build` runs the JS bundle first, then the blog build, then Tailwind CLI in sequence.
 
-1. `bun manifest frontend build` runs first
-2. `bun run scripts/build-blog.ts` runs second
-3. `bunx @tailwindcss/cli ...` runs last
-
-If CSS is empty or missing `prose` styles, first check the `@source` directive (see below), then check build order. Run the full `bun run build` pipeline.
+If CSS is empty or missing `prose` styles, first check the `@source` directive (see below), then run `bun run build` to trigger the full pipeline.
 
 ### Tailwind classes not applied — site unstyled or layout broken
 
-This is the most common issue. Tailwind v4 scans for utility classes **relative to the CSS file's location**. Since `styles.css` is in `frontend/`, Tailwind only scans `frontend/` by default — but the generated HTML lives in `dist/`.
+This is the most common issue. Two things must be true:
+
+1. **`bundleCss: false`** must be set in `config/frontend.ts`. Without it, Bun's CSS bundler runs alongside Tailwind CLI and overwrites its output.
+2. The `@source` directive must point to `dist/`.
+
+Tailwind v4 scans for utility classes **relative to the CSS file's location**. Since `styles.css` is in `frontend/`, Tailwind only scans `frontend/` by default — but the generated HTML lives in `dist/`.
 
 1. Open `frontend/styles.css` and check for `@source "../dist";` near the top (after `@import "tailwindcss"`).
 2. If it's missing, add it:
@@ -318,6 +338,14 @@ This is the most common issue. Tailwind v4 scans for utility classes **relative 
    ```
 3. Rebuild with `bun run build`.
 4. Verify the CSS output has real utility classes: `grep -c 'background-color\|max-width\|flex' dist/index.css` — should return a number greater than 10. If it returns 0–2, Tailwind still isn't scanning the right directory.
+
+### Dev watcher breaks CSS styling
+
+**Symptom:** Styles disappear after editing a file in `frontend/` during dev mode.
+
+**Cause:** Bun's built-in CSS bundler runs on every rebuild and overwrites the CSS file that Tailwind CLI generated.
+
+**Fix:** Set `bundleCss: false` in `config/frontend.ts` (see step 6). This tells the frontend build to skip CSS bundling entirely, letting Tailwind CLI be the sole CSS producer via `postBuild`.
 
 ### Tailwind CLI not found
 
