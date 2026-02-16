@@ -17,7 +17,7 @@ try {
     process.on('uncaughtException', (error) => {
       spark.emit({
         type: 'unhandled-error',
-        traceId: crypto.randomUUID(),
+        traceId: Bun.randomUUIDv7(),
         error: {
           message: error.message,
           stack: error.stack,
@@ -29,7 +29,7 @@ try {
       const error = reason instanceof Error ? reason : new Error(String(reason))
       spark.emit({
         type: 'unhandled-error',
-        traceId: crypto.randomUUID(),
+        traceId: Bun.randomUUIDv7(),
         error: {
           message: error.message,
           stack: error.stack,

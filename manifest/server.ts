@@ -105,7 +105,7 @@ export async function createManifestServer(options: ManifestServerOptions) {
       }
 
       const { feature, params } = match
-      const requestId = crypto.randomUUID()
+      const requestId = Bun.randomUUIDv7()
       const start = performance.now()
 
       const input: Record<string, unknown> = {}
