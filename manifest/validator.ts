@@ -5,6 +5,17 @@ export type ValidationErrors = Record<string, string>
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
+const patternCache = new WeakMap<StringFieldDef, RegExp>()
+
+function getPattern(field: StringFieldDef): RegExp {
+  let cached = patternCache.get(field)
+  if (!cached) {
+    cached = new RegExp(field.pattern!)
+    patternCache.set(field, cached)
+  }
+  return cached
+}
+
 function validateString(field: StringFieldDef, value: unknown): string | null {
   if (typeof value !== 'string') return 'invalid_type'
   if (field.format) {
@@ -26,7 +37,7 @@ function validateString(field: StringFieldDef, value: unknown): string | null {
   }
   if (field.pattern) {
     try {
-      if (!new RegExp(field.pattern).test(value)) return 'invalid_format'
+      if (!getPattern(field).test(value)) return 'invalid_format'
     } catch {
       return 'invalid_pattern'
     }
