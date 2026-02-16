@@ -9,6 +9,7 @@ config:
   - SPARK_ENV: "Override environment (defaults to NODE_ENV, then 'development')."
   - enabled: "Master switch for Spark event emission. (default: true)"
   - eventsDir: "Directory for event files. (default: .spark/events)"
+  - agentsDir: "Directory for agent presence files. (default: .spark/agents)"
   - watch.unhandledErrors: "Capture uncaughtException/unhandledRejection. (default: true)"
   - watch.serverErrors: "Capture 500 errors from features. (default: true)"
   - watch.processErrors: "Capture failures from commands run via manifest run. (default: true)"
@@ -44,10 +45,14 @@ This does three things:
 Pi ships as a project dependency of Manifest (`@mariozechner/pi-coding-agent`). No global install needed.
 
 ```bash
+# Human Pi — your interactive session (coordination is automatic)
 bunx pi
+
+# Spark sidecar — watches for errors and coordinates with human agents
+SPARK_ROLE=sidecar bunx pi
 ```
 
-Spark auto-loads via the extension path registered in `.pi/settings.json`.
+Spark auto-loads via the extension path registered in `.pi/settings.json`. The `SPARK_ROLE` env var tells Spark whether this instance is a human-operated session or the sidecar. Human Pi instances need no special flags — coordination is automatic.
 
 You'll need an API key for your preferred LLM provider (Anthropic, OpenAI, etc.) — Pi uses your own subscription. Run `pi` and it will guide you through API key setup on first launch.
 
@@ -229,6 +234,82 @@ Shows: enabled/disabled, current environment, pause state (with age), and pendin
 
 ---
 
+## Inter-Agent Coordination
+
+When multiple Pi instances are running — your interactive session and the Spark sidecar — they coordinate automatically through a **presence directory** at `.spark/agents/`. No manual `spark pause` needed.
+
+### How It Works
+
+Each human Pi instance maintains a JSON file in `.spark/agents/<uuid>.json`:
+
+```json
+{
+  "id": "a1b2c3d4-...",
+  "pid": 12345,
+  "status": "idle",
+  "startedAt": "2026-02-16T22:54:00.000Z",
+  "lastActivity": "2026-02-16T22:55:30.000Z"
+}
+```
+
+The lifecycle:
+
+| Pi Event | Action |
+|----------|--------|
+| `session_start` | Create agent file (`status: "idle"`). Emit `agent-start` event. |
+| `tool_call` (write, edit, bash) | Update agent file to `status: "working"` |
+| `agent_end` | Update agent file to `status: "idle"` |
+| `session_shutdown` | Delete agent file. Emit `agent-stop` event. |
+
+Only mutating tool calls (`write`, `edit`, `bash`) trigger the `"working"` status. Read-only tools like `read`, `todo`, and `subagent` don't pause the sidecar.
+
+### Role Detection: `SPARK_ROLE`
+
+The `SPARK_ROLE` environment variable distinguishes human Pi sessions from the sidecar. It's a per-process setting — not part of `config/spark.ts` — because the same project can have both roles running simultaneously.
+
+| Value | Behavior |
+|-------|----------|
+| *(unset or anything else)* | **Human mode** — creates/updates agent presence files, shows ambient status bar |
+| `sidecar` | **Sidecar mode** — watches `.spark/agents/`, auto-pauses when agents are working |
+
+### Human Pi Behavior
+
+Human Pi instances get **ambient awareness** of Spark activity via the status bar — no conversation interruption:
+
+- `⚡ Spark caught a 500 in create-user` — error events
+- `🤖 Agent joined (pid 12345)` — another agent connected
+- `👋 Agent left` — an agent disconnected
+- `🔧 Spark is on it` — sidecar is investigating
+
+Status messages rotate — new messages replace old ones.
+
+### Sidecar Behavior
+
+The sidecar (`SPARK_ROLE=sidecar`) watches both `.spark/events/` and `.spark/agents/`:
+
+1. **Agent file appears** → injects message into conversation: agent joined
+2. **Agent status → working** → buffers incoming error events (auto-pause)
+3. **Agent status → idle** → checks all agents; if none working, flushes buffered events
+4. **Agent file disappears** → injects message: agent left; checks if anyone still working
+5. **Stale detection** → on startup, scans `.spark/agents/`, removes files whose PID is dead
+
+Multiple human terminals are tracked independently — the sidecar stays paused until the **last** working agent goes idle ("last one out turns off the lights").
+
+### Interaction with Manual Pause
+
+Manual `spark pause` takes priority. The effective pause state is: `manualPause || anyAgentWorking`. Running `spark resume` only clears the manual pause — if agents are still working, the sidecar stays paused.
+
+### Event Types
+
+Two event types support coordination:
+
+- **`agent-start`** — emitted when a human Pi session starts
+- **`agent-stop`** — emitted when a human Pi session ends
+
+These are consumed by the sidecar (shown in conversation) and ignored by human Pi instances.
+
+---
+
 ## Environment Modes
 
 ### Development (`behavior: 'fix'`, `tools: 'full'`)
@@ -323,6 +404,46 @@ This means the Pi extension isn't running or has crashed.
    ```
    The runner creates it automatically, but check permissions.
 2. Run `bun manifest doctor` — it shows recent log files in the last hour.
+
+### Sidecar not pausing when an agent is working
+
+1. Verify the sidecar was started with the role env var:
+   ```bash
+   SPARK_ROLE=sidecar bunx pi
+   ```
+   Without `SPARK_ROLE=sidecar`, the instance runs as a human Pi and won't watch for agent presence.
+2. Check that agent files exist in `.spark/agents/`:
+   ```bash
+   ls -la .spark/agents/
+   ```
+   If no files are present, the human Pi instance isn't creating them — check that the Spark extension is loaded (`cat .pi/settings.json`).
+3. Verify the agent file shows `"status": "working"` during active tool calls:
+   ```bash
+   cat .spark/agents/*.json
+   ```
+
+### Stale agent files in `.spark/agents/`
+
+If a Pi session crashes without cleaning up, its agent file lingers. The sidecar auto-cleans stale files on startup by checking if the PID is still alive. To clean up manually:
+
+```bash
+rm .spark/agents/*.json
+```
+
+This is safe — running Pi instances will recreate their files on the next tool call.
+
+### Agent file not created
+
+1. Confirm `SPARK_ROLE` is **not** set to `sidecar`. Only human Pi instances create agent files; the sidecar only watches them.
+2. Verify the Spark extension is loaded:
+   ```bash
+   cat .pi/settings.json
+   ```
+   Look for `"./extensions/spark/pi-extension"` in the `extensions` array.
+3. Check that `.spark/agents/` directory exists:
+   ```bash
+   mkdir -p .spark/agents
+   ```
 
 ### Don't have Pi?
 
