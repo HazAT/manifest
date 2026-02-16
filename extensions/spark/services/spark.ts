@@ -4,7 +4,7 @@ import sparkConfig from '../../../config/spark'
 
 /** Event emitted by Spark when an error occurs in the application. */
 export type SparkEvent = {
-  type: 'server-error' | 'unhandled-error'
+  type: 'server-error' | 'unhandled-error' | 'process-error'
   traceId: string
   timestamp?: string
   environment?: string
@@ -13,6 +13,14 @@ export type SparkEvent = {
   status?: number
   error: { message: string; stack?: string }
   request?: { input?: Record<string, unknown> }
+  /** Command that was run (process-error events) */
+  command?: string
+  /** Process exit code (process-error events) */
+  exitCode?: number
+  /** Path to the full log file (process-error events) */
+  logFile?: string
+  /** Last ~50 lines of process output (process-error events) */
+  tail?: string
 }
 
 /** Pause file contents written to .spark/pause. */

@@ -17,6 +17,7 @@ export default {
   watch: {
     unhandledErrors: true,
     serverErrors: true,
+    processErrors: true,
   },
 
   // Per-environment behavior profiles

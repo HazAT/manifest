@@ -243,6 +243,31 @@ export async function doctor(_args: string[]): Promise<number> {
     console.log('')
   }
 
+  // ── Process runner logs ──
+  const logsDir = join(projectDir, '.spark', 'logs')
+  if (existsSync(logsDir)) {
+    try {
+      const logFiles = readdirSync(logsDir)
+        .filter(f => f.endsWith('.log'))
+        .map(f => ({ name: f, mtime: statSync(join(logsDir, f)).mtimeMs }))
+        .filter(f => Date.now() - f.mtime < 60 * 60 * 1000) // last hour
+        .sort((a, b) => b.mtime - a.mtime)
+
+      if (logFiles.length > 0) {
+        console.log('')
+        console.log('  \x1b[1m── Recent Process Logs ──\x1b[0m')
+        console.log('')
+        for (const f of logFiles.slice(0, 10)) {
+          const age = Math.round((Date.now() - f.mtime) / 60000)
+          console.log(`  \x1b[36m•\x1b[0m .spark/logs/${f.name} (${age}m ago)`)
+        }
+        console.log('')
+        console.log('  Read a log file to see full process output.')
+        console.log('')
+      }
+    } catch {}
+  }
+
   // ── Debugging tips ──
   console.log('  \x1b[1m── Debugging Tips ──\x1b[0m')
   console.log('')

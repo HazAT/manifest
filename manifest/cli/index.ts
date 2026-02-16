@@ -41,6 +41,8 @@ Usage:
   bun manifest frontend build                 Build frontend for production
   bun manifest frontend dev                   Start frontend dev watcher
 
+  bun manifest run <command> [args...]         Run a command with logging + Spark
+
   bun manifest spark init                     Initialize Spark sidekick
   bun manifest spark pause [reason]           Pause event processing
   bun manifest spark resume                   Resume event processing
@@ -158,6 +160,11 @@ switch (command) {
           : 'Missing subcommand. Usage: bun manifest spark init|pause|resume|status')
         process.exit(1)
     }
+    break
+  }
+  case 'run': {
+    const { run: runCmd } = await import('./run')
+    await runCmd(args.slice(1))
     break
   }
   case 'extension': {
