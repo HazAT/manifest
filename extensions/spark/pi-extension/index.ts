@@ -3,6 +3,14 @@ import fs from 'node:fs'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 
+type AgentInfo = {
+  id: string
+  pid: number
+  status: 'idle' | 'working'
+  startedAt: string
+  lastActivity: string
+}
+
 type SparkEvent = {
   type: string
   traceId: string
@@ -48,9 +56,13 @@ export default function spark(pi: ExtensionAPI) {
   let sessionCtx: any | undefined
   let ambientTimer: ReturnType<typeof setTimeout> | undefined
   let agentsWatcher: fs.FSWatcher | undefined
+  let agentsDebounceTimer: ReturnType<typeof setTimeout> | undefined
 
   // Role detection — sidecar mode skips all agent presence behavior
   const isSidecar = process.env.SPARK_ROLE === 'sidecar'
+
+  // Agent registry (sidecar only) — tracks known agents and their state
+  const agentRegistry = new Map<string, AgentInfo>()
 
   // Agent presence state (human mode only)
   let agentId: string | undefined
@@ -85,6 +97,113 @@ export default function spark(pi: ExtensionAPI) {
     const finalPath = path.join(eventsPath, filename)
     await fsp.writeFile(tmpPath, JSON.stringify(event, null, 2))
     await fsp.rename(tmpPath, finalPath)
+  }
+
+  function isAnyAgentWorking(): boolean {
+    for (const agent of agentRegistry.values()) {
+      if (agent.status === 'working') return true
+    }
+    return false
+  }
+
+  function isEffectivelyPaused(): boolean {
+    return paused || (isSidecar && isAnyAgentWorking())
+  }
+
+  function isPidAlive(pid: number): boolean {
+    try {
+      process.kill(pid, 0)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  async function cleanStaleAgents(agentsDir: string): Promise<string[]> {
+    const cleaned: string[] = []
+    try {
+      const files = await fsp.readdir(agentsDir)
+      for (const file of files.filter(f => f.endsWith('.json'))) {
+        const fullPath = path.join(agentsDir, file)
+        try {
+          const raw = await fsp.readFile(fullPath, 'utf-8')
+          const agent = JSON.parse(raw) as AgentInfo
+          if (!isPidAlive(agent.pid)) {
+            await fsp.unlink(fullPath)
+            cleaned.push(`pid ${agent.pid} (${agent.id.slice(0, 8)})`)
+          }
+        } catch {
+          // Unparseable — remove it
+          try { await fsp.unlink(fullPath) } catch {}
+          cleaned.push(`corrupt file ${file}`)
+        }
+      }
+    } catch {}
+    return cleaned
+  }
+
+  async function scanAgentsDir(agentsDir: string) {
+    const previousRegistry = new Map(agentRegistry)
+    const currentIds = new Set<string>()
+
+    try {
+      const files = await fsp.readdir(agentsDir)
+      for (const file of files.filter(f => f.endsWith('.json'))) {
+        const fullPath = path.join(agentsDir, file)
+        try {
+          const raw = await fsp.readFile(fullPath, 'utf-8')
+          const agent = JSON.parse(raw) as AgentInfo
+          currentIds.add(agent.id)
+          const previous = previousRegistry.get(agent.id)
+          agentRegistry.set(agent.id, agent)
+
+          if (!previous) {
+            // New agent joined
+            pi.sendMessage({ customType: 'spark-agent', content: `🤖 **Agent joined** (pid ${agent.pid})`, display: true })
+            if (agent.status === 'working') {
+              pi.sendMessage({ customType: 'spark-agent', content: '🔧 **Agent working** — pausing error processing', display: true })
+            }
+          } else if (previous.status !== agent.status) {
+            if (agent.status === 'working') {
+              pi.sendMessage({ customType: 'spark-agent', content: '🔧 **Agent working** — pausing error processing', display: true })
+            }
+            // idle transition handled below (check all agents)
+          }
+        } catch {}
+      }
+    } catch {}
+
+    // Detect departed agents
+    for (const [id, agent] of previousRegistry) {
+      if (!currentIds.has(id)) {
+        agentRegistry.delete(id)
+        pi.sendMessage({ customType: 'spark-agent', content: `👋 **Agent left** (pid ${agent.pid})`, display: true })
+      }
+    }
+
+    // Check if all agents are now idle/gone — resume and flush
+    const wasWorking = Array.from(previousRegistry.values()).some(a => a.status === 'working')
+    const nowWorking = isAnyAgentWorking()
+    if (wasWorking && !nowWorking && !paused) {
+      pi.sendMessage({ customType: 'spark-agent', content: '✅ **All agents idle** — resuming error processing', display: true })
+      // Flush buffered events
+      if (bufferedEvents.length > 0) {
+        const toFlush = bufferedEvents.splice(0)
+        injectEvents(toFlush)
+      }
+    }
+  }
+
+  function startAgentsWatcher(agentsDir: string) {
+    try {
+      agentsWatcher = fs.watch(agentsDir, () => {
+        if (agentsDebounceTimer) clearTimeout(agentsDebounceTimer)
+        agentsDebounceTimer = setTimeout(() => {
+          agentsDebounceTimer = undefined
+          scanAgentsDir(agentsDir)
+        }, 100)
+      })
+    } catch {}
   }
 
   function getEnvProfile(cfg: SparkConfig) {
@@ -224,7 +343,7 @@ export default function spark(pi: ExtensionAPI) {
     const filtered = isSidecar ? events : events.filter(e => !e.type.startsWith('agent-'))
     if (filtered.length === 0) return
 
-    if (paused) {
+    if (isEffectivelyPaused()) {
       bufferedEvents.push(...filtered)
       return
     }
@@ -374,19 +493,26 @@ You understand Manifest conventions: features are in features/, one file per beh
     // Ensure events directory exists
     await fsp.mkdir(eventsDir, { recursive: true })
 
-    // Agent presence (human mode only)
-    if (!isSidecar) {
+    // --- Doctor check ---
+    const report: string[] = ['⚡ **Spark starting up**']
+
+    // Agent presence setup
+    const agentsDir = path.resolve(ctx.cwd, '.spark', 'agents')
+    await fsp.mkdir(agentsDir, { recursive: true })
+
+    if (isSidecar) {
+      // Clean stale agent files (dead pids)
+      const cleaned = await cleanStaleAgents(agentsDir)
+      if (cleaned.length > 0) {
+        report.push(`Cleaned stale agents: ${cleaned.join(', ')}`)
+      }
+    } else {
       agentId = crypto.randomUUID()
-      const agentsDir = path.resolve(ctx.cwd, '.spark', 'agents')
-      await fsp.mkdir(agentsDir, { recursive: true })
       agentFilePath = path.join(agentsDir, `${agentId}.json`)
       eventsPath = eventsDir
       await writeAgentFile('idle', new Date().toISOString())
       await writeSparkEvent('agent-start', ctx.cwd)
     }
-
-    // --- Doctor check ---
-    const report: string[] = ['⚡ **Spark starting up**']
     report.push(`Environment: **${config.environment}** | Mode: **${profile.behavior}**`)
 
     // Git status
@@ -462,16 +588,18 @@ You understand Manifest conventions: features are in features/, one file per beh
     // Start watcher
     startWatcher(eventsDir, config.debounce.windowMs)
 
-    // Watch other agents (human mode only)
-    if (!isSidecar) {
-      const agentsDir = path.resolve(ctx.cwd, '.spark', 'agents')
+    // Watch agents directory
+    if (isSidecar) {
+      // Sidecar: full agent registry with auto-pause/resume
+      await scanAgentsDir(agentsDir) // Initial scan
+      startAgentsWatcher(agentsDir)
+    } else {
+      // Human mode: ambient status only
       try {
         agentsWatcher = fs.watch(agentsDir, (_eventType, filename) => {
           if (!filename?.endsWith('.json') || !agentId) return
-          // Filter out own agent file
           if (filename === `${agentId}.json`) return
           const filePath = path.join(agentsDir, filename)
-          // Check if file exists (create) or was removed (delete)
           fsp.access(filePath).then(
             () => showAmbientStatus('🤖 Another agent joined'),
             () => showAmbientStatus('👋 Agent left')
@@ -497,6 +625,10 @@ You understand Manifest conventions: features are in features/, one file per beh
     if (agentsWatcher) {
       agentsWatcher.close()
       agentsWatcher = undefined
+    }
+    if (agentsDebounceTimer) {
+      clearTimeout(agentsDebounceTimer)
+      agentsDebounceTimer = undefined
     }
     if (watcher) {
       watcher.close()
