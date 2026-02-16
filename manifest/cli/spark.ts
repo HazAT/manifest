@@ -4,7 +4,7 @@ import path from 'path'
 const CONFIG_PATH = 'config/spark.ts'
 const PI_SETTINGS_PATH = '.pi/settings.json'
 const GITIGNORE_PATH = '.gitignore'
-const SPARK_EXTENSION_REF = './extensions/spark/pi-extension'
+const SPARK_EXTENSION_REF = '../extensions/spark/pi-extension'
 
 const CONFIG_TEMPLATE = `/**
  * Spark sidekick configuration.

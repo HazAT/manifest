@@ -72,9 +72,27 @@ export default function spark(pi: ExtensionAPI) {
     const configPath = path.join(cwd, 'config', 'spark.ts')
     try {
       await fsp.access(configPath)
-      // Dynamic import with cache busting
-      const mod = await import(`${configPath}?t=${Date.now()}`)
-      return mod.default
+      // config/spark.ts uses Bun.env which isn't available in Pi (Node.js).
+      // Parse the file to extract static values and resolve env vars ourselves.
+      const raw = await fsp.readFile(configPath, 'utf-8')
+
+      // Defaults — matches config/spark.ts structure
+      const env = process.env.SPARK_ENV || process.env.NODE_ENV || 'development'
+      return {
+        enabled: !raw.includes('enabled: false'),
+        environment: env,
+        eventsDir: '.spark/events',
+        watch: {
+          unhandledErrors: !raw.includes('unhandledErrors: false'),
+          serverErrors: !raw.includes('serverErrors: false'),
+        },
+        environments: {
+          development: { tools: 'full', behavior: 'fix' },
+          production: { tools: 'readonly', behavior: 'alert' },
+        },
+        pause: { staleThresholdMinutes: 30 },
+        debounce: { windowMs: 1000 },
+      }
     } catch {
       return undefined
     }

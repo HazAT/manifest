@@ -3,6 +3,6 @@
     "../.claude/skills"
   ],
   "extensions": [
-    "./extensions/spark/pi-extension"
+    "../extensions/spark/pi-extension"
   ]
 }
