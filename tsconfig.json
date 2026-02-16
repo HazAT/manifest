@@ -1,20 +1,17 @@
 {
   "compilerOptions": {
     "target": "ESNext",
-    "module": "ESNext",
+    "module": "Preserve",
     "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
     "strict": true,
     "noUncheckedIndexedAccess": true,
-    "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": ".",
-    "types": ["bun-types"],
     "paths": {
       "manifest": ["./manifest/index.ts"],
       "manifest/*": ["./manifest/*"]
