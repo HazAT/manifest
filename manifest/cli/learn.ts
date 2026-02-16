@@ -18,6 +18,12 @@ import { scanFeatures } from '../scanner'
 import path from 'path'
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 
+export const meta = {
+  name: 'learn',
+  description: 'Scan for staleness and inconsistencies after changes',
+  usage: 'bun manifest learn',
+}
+
 interface Finding {
   level: 'warn' | 'info'
   message: string

@@ -17,6 +17,12 @@ import { scanAllFeatures } from '../scanner'
 import path from 'path'
 import { existsSync, readdirSync, readFileSync } from 'fs'
 
+export const meta = {
+  name: 'check',
+  description: 'Validate that features, extensions, and routes follow Manifest conventions',
+  usage: 'bun manifest check',
+}
+
 export async function check(_args: string[]): Promise<number> {
   const projectDir = process.cwd()
   const issues: string[] = []

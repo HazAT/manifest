@@ -242,32 +242,57 @@ export const serviceName = {
 
 Features import services directly: `import { serviceName } from '../services/serviceName'`
 
-## Common Commands
+## CLI Commands
+
+**Start here.** Run `bun manifest status` when you first arrive at the project. It tells you what's healthy, what's stale, and what needs attention — in seconds.
+
+### Which Command When
+
+| Situation | Command | What it does |
+|-----------|---------|-------------|
+| **Just arrived at this codebase** | `bun manifest status` | Quick pulse check — features, health, git, Spark, staleness |
+| **Something is broken** | `bun manifest doctor` | Deep diagnostics — imports every feature, checks config, shows extension troubleshooting |
+| **After making changes** | `bun manifest learn` | Scans for staleness — MANIFEST.md drift, AGENTS.md accuracy, missing tests |
+| **Before committing** | `bun manifest check` | Convention validator — descriptions, sideEffects, routes, input fields |
+| **MANIFEST.md is stale** | `bun manifest index` | Regenerates MANIFEST.md from current features, extensions, and CLI commands |
+
+### All Commands
 
 ```bash
-bun --hot index.ts                        # Start with hot reload
+# Quick start
+bun manifest status                       # Project health at a glance (start here)
+bun --hot index.ts                        # Start server with hot reload
 bun test                                  # Run all tests
-bun run manifest index                    # Regenerate MANIFEST.md
-bun run manifest check                    # Validate conventions
-bun run manifest learn                    # Check for staleness after changes
-bun run manifest doctor                   # Diagnose issues using extension guidance
-bun run manifest feature make <Name>      # Scaffold a new feature
-bun run manifest extension make <name>    # Scaffold a new extension
-bun run manifest extension install <src>  # Install an extension
-bun run manifest extension list           # List installed extensions
-bun run manifest frontend install        # Choose and install a frontend preset
-bun run manifest frontend build          # Build the frontend
-bun run manifest frontend dev            # Start frontend watcher with live reload
+
+# Validation & diagnostics
+bun manifest check                        # Validate conventions
+bun manifest index                        # Rebuild MANIFEST.md
+bun manifest learn                        # Check for staleness after changes
+bun manifest doctor                       # Diagnose system issues
+
+# Scaffolding (outputs agent prompts — no files written)
+bun manifest feature make <Name>          # Scaffold a new feature
+bun manifest extension make <name>        # Scaffold a new extension
+bun manifest extension install <src>      # Install an extension from GitHub or npm
+bun manifest extension list               # List installed extensions
+
+# Frontend
+bun manifest frontend install             # Choose and install a frontend preset
+bun manifest frontend build               # Build frontend for production
+bun manifest frontend dev                 # Start standalone frontend watcher
+
+# Process runner
+bun manifest run <command> [args...]      # Run with logging + Spark error reporting
+bun manifest run dev                      # Sugar for: bun --hot index.ts
+
+# Spark sidekick
+bun manifest spark init                   # Set up Spark (config + Pi extension)
+bun manifest spark status                 # Show Spark state
+bun manifest spark pause "reason"         # Tell Spark to back off
+bun manifest spark resume                 # Let Spark process events again
 ```
 
 ### Spark Commands
-
-```bash
-bun run manifest spark init               # Set up Spark (config + Pi extension pointer)
-bun run manifest spark status             # Show Spark state (environment, pause, events)
-bun run manifest spark pause "reason"     # Tell Spark to back off (you're working)
-bun run manifest spark resume             # Let Spark process events again
-```
 
 ### Starting Spark
 
@@ -311,7 +336,7 @@ The framework lives in `manifest/`. It's ~3,100 lines total. Read it:
 | `testing.ts` | 124 | `createTestClient()` — call features by name without HTTP. Stream testing. |
 | `frontend.ts` | 181 | `Bun.build()` wrapper, static file serving, live reload. |
 | `index.ts` | 31 | Barrel export for framework types and utilities. |
-| `cli/` | ~1800 | CLI commands: serve, index, check, learn, doctor, make:feature, extension (make/install/list), frontend, spark, run. |
+| `cli/` | ~2250 | CLI commands: status, serve, index, check, learn, doctor, make:feature, extension (make/install/list), frontend, spark, run. Each command exports `meta` for self-documentation. |
 
 If something in the framework doesn't work for your use case, modify it. It's your code.
 
@@ -440,11 +465,13 @@ Every event carries a `traceId` that links back to the original request. For ser
 
 ## When In Doubt
 
-1. Read the source. The framework is ~3,100 lines. The answers are there.
-2. Read `MANIFEST.md` — it's the index of everything.
-3. Read the feature file — it's self-contained.
-4. Run `bun run manifest check` — it validates conventions.
-5. Read `git log` — the commit history explains what changed and why.
+1. Run `bun manifest status` — quick health check, shows what needs attention.
+2. Read the source. The framework is ~3,100 lines. The answers are there.
+3. Read `MANIFEST.md` — it's the index of everything (features, extensions, CLI commands).
+4. Read the feature file — it's self-contained.
+5. Run `bun manifest check` — it validates conventions.
+6. Run `bun manifest doctor` — deep diagnostics when something is broken.
+7. Read `git log` — the commit history explains what changed and why.
 
 ## Process Runner
 

@@ -37,6 +37,31 @@ This is a Manifest application. All behavior lives in feature files.
 | manifest-frontend-reactive | 0.1.0 | SolidJS + Tailwind CSS frontend preset. Fine-grained reactivity without a virtual DOM. |
 | spark | 0.1.0 | Reactive AI sidekick for Manifest apps. Watches for errors and events, emits them to a file-based bus for consumption by a Pi agent. |
 
+
+## CLI Commands
+| Command | Description |
+|---------|-------------|
+| `bun manifest status` | Quick project health check — the first command to run when arriving at a codebase |
+| `bun manifest serve [--port=8080]` | Start the development server |
+| `bun manifest index` | Rebuild MANIFEST.md from the current codebase state |
+| `bun manifest check` | Validate that features, extensions, and routes follow Manifest conventions |
+| `bun manifest learn` | Scan for staleness and inconsistencies after changes |
+| `bun manifest doctor` | Diagnose system issues, check extensions, show debugging guidance |
+| `bun manifest feature make <Name> [--route="METHOD /path"] [--auth=none|required] [--type=stream]` | Output an agent prompt for scaffolding a new feature (no files written) |
+| `bun manifest extension make <name>` | Output an agent prompt for scaffolding a new extension (no files written) |
+| `bun manifest extension install <url|name>` | Output an agent prompt for installing an extension from GitHub or npm |
+| `bun manifest extension list` | List all installed extensions with version and description |
+| `bun manifest frontend install` | Output an agent prompt to choose and install a frontend preset |
+| `bun manifest frontend build` | Build the frontend for production |
+| `bun manifest frontend dev` | Start a standalone frontend file watcher with live reload |
+| `bun manifest run <command> [args...]` | Run a command with output logging and Spark error reporting |
+| `bun manifest spark init` | Initialize Spark sidekick (config, Pi extension, .gitignore) |
+| `bun manifest spark pause [reason]` | Pause Spark event processing (use when making changes) |
+| `bun manifest spark resume` | Resume Spark event processing |
+| `bun manifest spark status` | Show current Spark status (enabled, environment, paused, events) |
+
+Start here: `bun manifest status` for a quick health check.
+
 ## Known Issues
 - None currently.
 

@@ -7,6 +7,24 @@
 
 import { buildFrontend, watchFrontend } from '../frontend'
 
+export const meta = [
+  {
+    name: 'frontend install',
+    description: 'Output an agent prompt to choose and install a frontend preset',
+    usage: 'bun manifest frontend install',
+  },
+  {
+    name: 'frontend build',
+    description: 'Build the frontend for production',
+    usage: 'bun manifest frontend build',
+  },
+  {
+    name: 'frontend dev',
+    description: 'Start a standalone frontend file watcher with live reload',
+    usage: 'bun manifest frontend dev',
+  },
+]
+
 export async function frontendInstall(_args: string[]): Promise<void> {
   const prompt = `You are setting up a frontend for this Manifest project.
 

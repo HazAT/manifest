@@ -7,6 +7,12 @@
  * agent exactly what file to create, the full template, and what to fill in.
  */
 
+export const meta = {
+  name: 'feature make',
+  description: 'Output an agent prompt for scaffolding a new feature (no files written)',
+  usage: 'bun manifest feature make <Name> [--route="METHOD /path"] [--auth=none|required] [--type=stream]',
+}
+
 export async function makeFeature(args: string[]): Promise<void> {
   const className = args[0]
 

@@ -3,59 +3,64 @@ export {}
 /**
  * Manifest CLI entry point.
  *
- * Usage:
- *   bun manifest serve
- *   bun manifest index
- *   bun manifest check
- *   bun manifest learn
- *   bun manifest feature make <Name>
- *   bun manifest extension make|install|list
- *
- * Backward-compatible aliases:
- *   bun manifest make:feature <Name>
- *
  * This CLI is intentionally simple. No commander.js, no yargs.
- * Just process.argv parsing.
+ * Just process.argv parsing. Every command exports a `meta` object
+ * (or array of objects) with name, description, and usage — used for
+ * help text and MANIFEST.md generation.
  */
+
+import type { CommandMeta } from './meta'
 
 const args = process.argv.slice(2)
 const command = args[0]
 
 if (!command) {
-  console.log(`
-Manifest CLI - Production is our dev environment.
+  // Dynamic help from command metadata
+  const { getAllCommandMeta } = await import('./meta')
+  const commands = getAllCommandMeta()
 
-Usage:
-  bun manifest serve [--port=8080]           Start the development server
-  bun manifest index                          Rebuild MANIFEST.md
-  bun manifest check                          Validate conventions
-  bun manifest learn                          Check for staleness after changes
-  bun manifest doctor                         Diagnose issues using extension guidance
+  // Group commands by category
+  const categories: Record<string, CommandMeta[]> = {
+    'Quick Start': [],
+    'Validation & Diagnostics': [],
+    'Scaffolding (Agent Prompts)': [],
+    'Frontend': [],
+    'Process Runner': [],
+    'Spark Sidekick': [],
+  }
 
-  bun manifest feature make <Name>            Scaffold a new feature
-  bun manifest extension make <name>          Scaffold a new extension
-  bun manifest extension install <url|name>   Install an extension
-  bun manifest extension list                 List installed extensions
+  for (const cmd of commands) {
+    if (['status', 'serve'].includes(cmd.name)) categories['Quick Start']!.push(cmd)
+    else if (['check', 'index', 'learn', 'doctor'].includes(cmd.name)) categories['Validation & Diagnostics']!.push(cmd)
+    else if (cmd.name.startsWith('feature') || cmd.name.startsWith('extension')) categories['Scaffolding (Agent Prompts)']!.push(cmd)
+    else if (cmd.name.startsWith('frontend')) categories['Frontend']!.push(cmd)
+    else if (cmd.name === 'run') categories['Process Runner']!.push(cmd)
+    else if (cmd.name.startsWith('spark')) categories['Spark Sidekick']!.push(cmd)
+  }
 
-  bun manifest frontend install               Choose and install a frontend preset
-  bun manifest frontend build                 Build frontend for production
-  bun manifest frontend dev                   Start frontend dev watcher
+  console.log('\nManifest CLI — Production is our dev environment.\n')
 
-  bun manifest run <command> [args...]         Run a command with logging + Spark
+  for (const [category, cmds] of Object.entries(categories)) {
+    if (cmds.length === 0) continue
+    console.log(`  \x1b[1m${category}\x1b[0m`)
+    const maxUsage = Math.max(...cmds.map(c => c.usage.length))
+    for (const cmd of cmds) {
+      console.log(`    ${cmd.usage.padEnd(maxUsage + 2)} ${cmd.description}`)
+    }
+    console.log('')
+  }
 
-  bun manifest spark init                     Initialize Spark sidekick
-  bun manifest spark pause [reason]           Pause event processing
-  bun manifest spark resume                   Resume event processing
-  bun manifest spark status                   Show Spark status
-
-Aliases:
-  bun manifest make:feature <Name>            Same as feature make
-
-`)
+  console.log('  \x1b[2mAliases: bun manifest make:feature <Name> → feature make\x1b[0m\n')
   process.exit(0)
 }
 
 switch (command) {
+  case 'status': {
+    const { status } = await import('./status')
+    const exitCode = await status(args.slice(1))
+    process.exit(exitCode)
+    break
+  }
   case 'serve': {
     const { serve } = await import('./serve')
     await serve(args.slice(1))

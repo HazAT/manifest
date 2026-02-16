@@ -11,6 +11,12 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
 import { join, resolve } from 'path'
 
+export const meta = {
+  name: 'doctor',
+  description: 'Diagnose system issues, check extensions, show debugging guidance',
+  usage: 'bun manifest doctor',
+}
+
 interface ExtensionDiagnostic {
   name: string
   troubleshooting: string

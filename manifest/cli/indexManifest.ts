@@ -12,6 +12,12 @@ import { scanAllFeatures } from '../scanner'
 import path from 'path'
 import { readdirSync, readFileSync, existsSync } from 'fs'
 
+export const meta = {
+  name: 'index',
+  description: 'Rebuild MANIFEST.md from the current codebase state',
+  usage: 'bun manifest index',
+}
+
 export async function indexManifest(_args: string[]): Promise<void> {
   const projectDir = process.cwd()
 
@@ -84,6 +90,21 @@ export async function indexManifest(_args: string[]): Promise<void> {
       }
       md += `\n`
     }
+  }
+
+  // CLI Commands section
+  const { getAllCommandMeta } = await import('./meta')
+  const commands = getAllCommandMeta()
+  if (commands.length > 0) {
+    md += `\n## CLI Commands\n`
+    md += `| Command | Description |\n`
+    md += `|---------|-------------|\n`
+    for (const cmd of commands) {
+      md += `| \`${cmd.usage}\` | ${cmd.description} |\n`
+    }
+    md += `\n`
+    md += `Start here: \`bun manifest status\` for a quick health check.\n`
+    md += `\n`
   }
 
   md += `## Known Issues\n`

@@ -1,6 +1,29 @@
 import fs from 'fs/promises'
 import path from 'path'
 
+export const meta = [
+  {
+    name: 'spark init',
+    description: 'Initialize Spark sidekick (config, Pi extension, .gitignore)',
+    usage: 'bun manifest spark init',
+  },
+  {
+    name: 'spark pause',
+    description: 'Pause Spark event processing (use when making changes)',
+    usage: 'bun manifest spark pause [reason]',
+  },
+  {
+    name: 'spark resume',
+    description: 'Resume Spark event processing',
+    usage: 'bun manifest spark resume',
+  },
+  {
+    name: 'spark status',
+    description: 'Show current Spark status (enabled, environment, paused, events)',
+    usage: 'bun manifest spark status',
+  },
+]
+
 const CONFIG_PATH = 'config/spark.ts'
 const PI_SETTINGS_PATH = '.pi/settings.json'
 const GITIGNORE_PATH = '.gitignore'

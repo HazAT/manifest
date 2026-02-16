@@ -11,6 +11,12 @@
 import fs from 'fs'
 import path from 'path'
 
+export const meta = {
+  name: 'run',
+  description: 'Run a command with output logging and Spark error reporting',
+  usage: 'bun manifest run <command> [args...]',
+}
+
 /** Sugar shortcuts: short alias → full command */
 const SUGAR: Record<string, string[]> = {
   dev: ['bun', '--hot', 'index.ts'],

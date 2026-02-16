@@ -5,6 +5,12 @@
 
 import { createManifestServer } from '../server'
 
+export const meta = {
+  name: 'serve',
+  description: 'Start the development server',
+  usage: 'bun manifest serve [--port=8080]',
+}
+
 export async function serve(args: string[]): Promise<void> {
   const projectDir = process.cwd()
   let port = 8080

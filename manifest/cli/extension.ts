@@ -8,6 +8,24 @@
 import { readdirSync, readFileSync, existsSync } from 'fs'
 import { join } from 'path'
 
+export const meta = [
+  {
+    name: 'extension make',
+    description: 'Output an agent prompt for scaffolding a new extension (no files written)',
+    usage: 'bun manifest extension make <name>',
+  },
+  {
+    name: 'extension install',
+    description: 'Output an agent prompt for installing an extension from GitHub or npm',
+    usage: 'bun manifest extension install <url|name>',
+  },
+  {
+    name: 'extension list',
+    description: 'List all installed extensions with version and description',
+    usage: 'bun manifest extension list',
+  },
+]
+
 function toKebabCase(name: string): string {
   return name
     .replace(/([a-z])([A-Z])/g, '$1-$2')
