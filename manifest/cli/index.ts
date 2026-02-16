@@ -41,6 +41,11 @@ Usage:
   bun manifest frontend build                 Build frontend for production
   bun manifest frontend dev                   Start frontend dev watcher
 
+  bun manifest spark init                     Initialize Spark sidekick
+  bun manifest spark pause [reason]           Pause event processing
+  bun manifest spark resume                   Resume event processing
+  bun manifest spark status                   Show Spark status
+
 Aliases:
   bun manifest make:feature <Name>            Same as feature make
 
@@ -120,6 +125,37 @@ switch (command) {
         console.error(subcommand
           ? `Unknown frontend subcommand: ${subcommand}`
           : 'Missing subcommand. Usage: bun manifest frontend install|build|dev')
+        process.exit(1)
+    }
+    break
+  }
+  case 'spark': {
+    const subcommand = args[1]
+    switch (subcommand) {
+      case 'init': {
+        const { sparkInit } = await import('./spark')
+        await sparkInit(args.slice(2))
+        break
+      }
+      case 'pause': {
+        const { sparkPause } = await import('./spark')
+        await sparkPause(args.slice(2))
+        break
+      }
+      case 'resume': {
+        const { sparkResume } = await import('./spark')
+        await sparkResume(args.slice(2))
+        break
+      }
+      case 'status': {
+        const { sparkStatus } = await import('./spark')
+        await sparkStatus(args.slice(2))
+        break
+      }
+      default:
+        console.error(subcommand
+          ? `Unknown spark subcommand: ${subcommand}`
+          : 'Missing subcommand. Usage: bun manifest spark init|pause|resume|status')
         process.exit(1)
     }
     break

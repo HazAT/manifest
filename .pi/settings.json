@@ -1,3 +1,8 @@
 {
-  "skills": ["../.claude/skills"]
+  "skills": [
+    "../.claude/skills"
+  ],
+  "extensions": [
+    "./extensions/spark/pi-extension"
+  ]
 }
