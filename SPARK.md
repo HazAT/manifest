@@ -112,7 +112,7 @@ git clone https://github.com/HazAT/manifest.git .
 rm -rf .git
 git init
 git add -A
-git commit -m "Initial commit from Manifest"
+git commit -m "Initial commit of [project-name]"
 ```
 
 **If the current directory is not empty** (or the user didn't specify), clone into a new folder:
@@ -125,10 +125,10 @@ cd [project-name]
 rm -rf .git
 git init
 git add -A
-git commit -m "Initial commit from Manifest"
+git commit -m "Initial commit of [project-name]"
 ```
 
-Replace `[project-name]` with their actual project name, lowercased and hyphenated.
+Replace `[project-name]` with their actual project name, lowercased and hyphenated. The initial commit marks the birth of **their app**, not the framework — use the app name.
 
 > The repo is yours. No upstream link, no fork relationship. If you want to push it to GitHub (or anywhere else), create a repo and add the remote whenever you're ready — there's no rush.
 
@@ -143,26 +143,19 @@ Then do it yourself:
 1. Edit `package.json` — change `"name"` to their project name
 2. Edit `config/manifest.ts` — change `appName` to their project name
 3. Run `bun install`
-4. **Offer to write `VISION.md`** — this is the soul of their project, but don't force it.
+4. **Write `VISION.md`** — this is the soul of their project.
 
 `VISION.md` is about *the app being built* — not about Manifest the framework. The cloned repo ships with a placeholder. This step replaces that placeholder with the user's actual vision. **Replace the entire file** — don't append to the template comments.
 
-**Be proactive, not annoying.** The user already told you what they're building. Ask them:
+**If the user gave you a descriptive app name and explained what it does — even in one sentence — you have enough.** Don't ask permission, don't offer a menu of options. Just tell them:
 
-> There's a file called `VISION.md` — it's the first thing any agent reads when it starts working in your codebase. It's about your app: what it does, who it's for, where it's heading. I can write a first draft from what you've told me so far.
->
-> How much thought do you want to put into this right now? I can:
-> 1. Write a quick draft from what you've already said — we move on in 30 seconds
-> 2. Ask you a couple of questions to get it dialed in
-> 3. Skip it — you can fill it in later whenever you want
+> You've told me enough to write the vision for you — I'll draft `VISION.md` and you can tune it later.
 
-**If they pick 1** — write it from what you know. Keep it brief.
+Then write it immediately.
 
-**If they pick 2** — ask at most two questions: "What problem does this solve?" and "Who's it for?" Then write it.
+**If the user was vague** (e.g., "make me an app" with no description), ask at most two questions: "What problem does this solve?" and "Who's it for?" Then write it.
 
-**If they pick 3** — move on. Don't mention it again. The placeholder stays.
-
-**If they don't explicitly pick** and just keep talking about their project — use your judgment. If you have enough context, write a quick draft and show it to them. If not, skip it.
+**If they explicitly say they want to skip it** — move on. Don't mention it again. The placeholder stays.
 
 The file should be:
 - **Brief** — 3-5 sentences, never more than a short paragraph

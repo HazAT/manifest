@@ -377,7 +377,7 @@ cd my-app
 rm -rf .git
 git init
 git add -A
-git commit -m "Initial commit from Manifest"
+git commit -m "Initial commit of my-app"
 bun install
 
 # Start developing
@@ -422,7 +422,7 @@ Manifest doesn't install from npm. You clone the repo and start building.
 git clone https://github.com/hazat/manifest.git my-project
 cd my-project
 rm -rf .git
-git init && git add -A && git commit -m "Initial commit from Manifest"
+git init && git add -A && git commit -m "Initial commit of my-project"
 bun install
 bun --hot index.ts
 ```
