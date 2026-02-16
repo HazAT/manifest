@@ -15,7 +15,7 @@ Update your Manifest project from the upstream base repository.
 
 Manifest ships as source code in your project. You own it. You may have modified framework files, added features, changed conventions. A blind `git merge` from upstream will create conflicts and break things.
 
-Instead, you read what upstream changed, understand the intent, and apply the ideas in the context of what this project has become. You're not merging code — you're transferring knowledge.
+Instead, you read what upstream changed, understand the intent, and rebase your local work on top of upstream so your commits stay clean and linear.
 
 ## Steps
 
@@ -33,7 +33,7 @@ git fetch upstream main
 
 ### 3. Read the Upstream Commits
 
-This is the critical step. **Do not merge yet.** Read what changed:
+This is the critical step. **Do not merge or rebase yet.** Read what changed:
 
 ```bash
 # See all commits since this project diverged from upstream
@@ -55,13 +55,7 @@ For each commit, understand:
 ### 4. Review the Actual Diff
 
 ```bash
-# See the full diff of what's new upstream
-git diff HEAD...upstream/main
-```
-
-For a file-by-file view:
-
-```bash
+# File-by-file summary of what's new upstream
 git diff HEAD...upstream/main --stat
 ```
 
@@ -71,41 +65,91 @@ If specific files look important, read them individually:
 git diff HEAD...upstream/main -- manifest/router.ts
 ```
 
-### 5. Check for Conflicts with Local Changes
+### 5. Identify Overlap Between Local and Upstream Changes
 
-Before doing anything, understand what you've changed locally:
-
-```bash
-# Files you've modified in manifest/ compared to when you forked
-git log --oneline --all -- manifest/
-```
-
-Compare your version of a file with upstream's:
+Find which files **both sides** modified — these are potential conflict zones:
 
 ```bash
-git diff HEAD upstream/main -- manifest/server.ts
+MERGE_BASE=$(git merge-base HEAD upstream/main)
+comm -12 <(git diff --name-only $MERGE_BASE HEAD | sort) <(git diff --name-only $MERGE_BASE upstream/main | sort)
 ```
 
-### 6. Decide Your Strategy
-
-Based on what you've read, choose one of these approaches **per file or change**:
-
-**A. Clean apply** — You haven't modified this file. The upstream change is straightforward. Apply it directly.
+For each overlapping file, review both versions to understand the divergence:
 
 ```bash
-# Checkout a specific file from upstream
-git checkout upstream/main -- manifest/some-file.ts
+git diff HEAD upstream/main -- path/to/file
 ```
 
-**B. Adapt and implement** — You've modified this file, or the upstream change doesn't apply cleanly. Read the upstream version, understand the intent, and implement the change yourself in a way that fits your project.
+Also check `git diff --name-only $MERGE_BASE HEAD` to see the full list of local changes.
 
-Don't copy-paste from upstream. Write the code that belongs in your codebase.
+### 6. Stash Uncommitted Work
 
-**C. Skip** — The upstream change doesn't apply to your project or conflicts with a deliberate decision you've made. Note it in your commit message so future updates know it was intentional.
+If there are uncommitted changes, stash them before rebasing:
 
-### 7. Test
+```bash
+git stash
+```
 
-After applying changes:
+**Important:** The stash pop after rebase can also produce conflicts if stashed files were modified by upstream. Resolve those the same way as rebase conflicts.
+
+### 7. Rebase onto Upstream
+
+Rebase replays your local commits on top of upstream, keeping history linear:
+
+```bash
+git rebase upstream/main
+```
+
+**Critical: avoid vim.** When `git rebase --continue` needs a commit message (after resolving a conflict), it opens an editor. Use `GIT_EDITOR=true` to accept the existing message without blocking:
+
+```bash
+GIT_EDITOR=true git rebase --continue
+```
+
+### 8. Resolve Conflicts
+
+When a conflict occurs, the rebase pauses. For each conflicted file, decide:
+
+**A. Keep upstream's version** — You haven't meaningfully customized this file. The upstream change is the right one.
+
+```bash
+git checkout --ours path/to/file    # "ours" = upstream during rebase
+```
+
+**B. Keep your version** — This is project-specific (e.g., your Dockerfile, your deployment config).
+
+```bash
+git checkout --theirs path/to/file  # "theirs" = your commits during rebase
+```
+
+**C. Manual merge** — Both sides made meaningful changes. Edit the file to combine them, removing conflict markers.
+
+⚠️ **Rebase flips ours/theirs!** During a rebase:
+- `--ours` = the branch you're rebasing **onto** (upstream)
+- `--theirs` = the commits being **replayed** (your local work)
+
+This is the opposite of a normal merge. Double-check which version you're keeping.
+
+After resolving all conflicts in a step:
+
+```bash
+git add <resolved-files>
+GIT_EDITOR=true git rebase --continue
+```
+
+### 9. Pop the Stash
+
+If you stashed in step 6:
+
+```bash
+git stash pop
+```
+
+If the stash pop has conflicts, resolve them the same way — edit the files, remove conflict markers, then `git add` the resolved files and `git stash drop`.
+
+### 10. Test
+
+After the rebase is complete and stash is restored:
 
 ```bash
 bun test
@@ -113,35 +157,9 @@ bunx tsc --noEmit
 bun run manifest check
 ```
 
-All three must pass before committing.
+All three must pass.
 
-### 8. Commit with Full Context
-
-Write a commit message that explains what you pulled from upstream and how you applied it:
-
-```
-chore: update from upstream manifest (upstream@abc1234..def5678)
-
-Applied:
-- New rate limiting support in manifest/server.ts — adapted to work
-  with our custom auth middleware
-- Updated manifest/validator.ts with UUID format validation
-- New make:schema CLI command
-
-Skipped:
-- Upstream changed envelope format to include `timestamp` field —
-  we already have this via our custom envelope extension
-
-Adapted:
-- Router now supports wildcard routes upstream, but we modified the
-  implementation to also support our prefix-based multi-tenant routing
-
-All tests pass. tsc clean. manifest check clean.
-```
-
-This commit message is how the next update knows what happened. Make it thorough.
-
-### 9. Update MANIFEST.md
+### 11. Update MANIFEST.md
 
 If framework files changed:
 
@@ -153,8 +171,9 @@ bun run manifest index
 
 ## Rules
 
-- **Never `git merge upstream/main` blindly.** Always read the commits first.
-- **Never force-apply upstream changes over local modifications.** If you've customized a file, adapt the upstream change to your version — don't overwrite your work.
-- **Always test after applying.** `bun test`, `bunx tsc --noEmit`, `bun run manifest check`.
-- **Always write a thorough commit message.** List what was applied, skipped, and adapted. The next person (or agent) doing an update depends on this.
-- **It's okay to skip things.** Upstream serves as reference and inspiration, not law. If a change doesn't fit your project, skip it and note why.
+- **Prefer rebase over merge.** Keeps history linear and your commits on top.
+- **Always use `GIT_EDITOR=true`** when running `git rebase --continue` to avoid blocking on an interactive editor.
+- **Never force-apply upstream changes over local customizations.** If you've deliberately changed a file (Dockerfile, deployment config, etc.), keep your version.
+- **Always read the commits first.** Understand what upstream changed before touching anything.
+- **Always test after the rebase.** `bun test`, `bunx tsc --noEmit`, `bun run manifest check`.
+- **It's okay to keep your version.** Upstream serves as reference and inspiration, not law. Project-specific files (Docker, nginx, deployment) are yours.
