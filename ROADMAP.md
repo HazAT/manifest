@@ -2,7 +2,7 @@
 
 > What's done, what's next, what's on the horizon.
 
-Last updated: 2026-02-15
+Last updated: 2026-02-16
 
 ---
 
@@ -83,7 +83,7 @@ What you need to build something beyond HelloWorld. This turns Manifest from a f
 ### Server Hardening
 
 - [ ] CORS configuration
-- [ ] Health check endpoint (`GET /health`)
+- [x] Health check endpoint (`GET /__health`)
 - [ ] Graceful shutdown (finish in-flight requests, close DB connections)
 - [ ] Structured logging (JSON logs with feature name, request ID, duration)
 - [ ] Request body size limits
@@ -216,35 +216,29 @@ This is the endgame. An AI agent running as a sidecar in production, monitoring 
   Risk: Low
   ```
 
-### Agent Memory & Context
+### Agent Lifecycle & Guardrails → OpenClaw
 
-- [ ] Memory file (`agent-memory.md`) persisted in git — what the agent knows, recent fixes, patterns observed
-- [ ] On container restart: agent reads memory file, reads MANIFEST.md, diffs what changed since last boot
-- [ ] Graceful shutdown: agent gets 30s to commit work-in-progress and update memory file
-- [ ] Agent changelog: `bun manifest agent:changelog` shows what the agent changed since last human release
-
-### Agent Guardrails
-
-- [ ] Agent can only push to configured branches
-- [ ] Agent cannot force-push or delete branches
-- [ ] Agent cannot run migrations (schema changes are human-authored)
-- [ ] Agent cannot modify CI/CD pipelines or secrets
-- [ ] Filesystem access limited to project directory
-- [ ] Network access limited to git remote + error tracker API
-- [ ] Dedicated SSH key / deploy key with minimal permissions
-- [ ] If a fix breaks tests, the agent reverts and flags for human review
-- [ ] Merge conflicts → agent stops and flags for human resolution
-
-### Observability
-
-- [ ] Agent dashboard: what the agent has fixed, when, confidence level
-- [ ] Alert when the agent can't fix something (needs human)
-- [ ] Audit log of all agent commits with diffs
-- [ ] Metrics: mean time to agent fix, fix success rate, revert rate
+Agent memory, guardrails, monitoring, and multi-agent coordination are managed by **OpenClaw** (see Phase 6). Manifest provides the hooks — structured logs, `MANIFEST.md`, `AGENTS.md`, the `/__health` endpoint — and OpenClaw provides the orchestration layer.
 
 ---
 
-## 🌊 Phase 6: Things We're Thinking About
+## 🔨 Phase 6: OpenClaw Integration
+
+OpenClaw manages the production agent lifecycle — deploying, monitoring, and controlling the AI sidecar that runs alongside your Manifest app. Instead of building bespoke agent orchestration into every project, OpenClaw provides it as a managed service.
+
+- [ ] **OpenClaw SDK integration** — Connect Manifest's production agent to OpenClaw for lifecycle management (start, stop, restart, health checks)
+- [ ] **Agent provisioning** — OpenClaw deploys and configures the agent sidecar based on the Manifest project's `AGENTS.md` and `MANIFEST.md`
+- [ ] **Remote monitoring** — Error events, agent actions, and fix history streamed to OpenClaw dashboard
+- [ ] **Guardrail enforcement** — OpenClaw enforces agent boundaries (branch protection, file access, network limits) from outside the container
+- [ ] **Agent memory sync** — Agent memory persisted and synced through OpenClaw, survives container restarts and redeployments
+- [ ] **Human escalation** — When the agent can't fix something, OpenClaw routes it to the right human with full context (error, attempted fixes, relevant feature files)
+- [ ] **Multi-agent coordination** — OpenClaw manages multiple agents across environments (staging, production) and prevents conflicts
+
+This replaces the bespoke "Agent Sidecar" and "Agent Guardrails" sections from Phase 5 — OpenClaw handles that layer so Manifest focuses on the framework.
+
+---
+
+## 🌊 Phase 7: Things We're Thinking About
 
 Not committed to. Exploring.
 
