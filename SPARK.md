@@ -372,6 +372,45 @@ Before building:
 
 The goal: when the user opens their new Manifest site next to their old site, the design should feel like the same site on a better engine — not a downgrade to a generic template.
 
+### Step 5b: Set Up the Spark Sidekick
+
+The Spark sidekick runs as a [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) agent — it needs Pi installed with a working LLM API key. Check first:
+
+```bash
+# Check if Pi is available
+bunx pi --version 2>/dev/null || npx pi --version 2>/dev/null || pi --version 2>/dev/null
+```
+
+**If Pi is available**, initialize the sidekick:
+
+```bash
+bun manifest spark init
+```
+
+Tell the user:
+
+> I've set up Spark — the AI sidekick that watches your running app for errors. When something breaks, Spark sees the stack trace, reads the feature file, and either fixes it or tells you what happened. It works through a Pi extension that loads automatically in every session.
+>
+> You don't need to start it now — it'll activate when you open a fresh Pi session.
+
+Don't belabor this. The sidekick is a background capability, not a ceremony.
+
+**If Pi is NOT available**, skip `spark init` and tell the user:
+
+> Manifest comes with Spark — an AI sidekick that watches your running app and reacts to errors in real time. It needs [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) to run, which I don't see installed yet.
+>
+> When you're ready to set it up:
+> 1. Install Pi: `npm install -g @mariozechner/pi-coding-agent`
+> 2. Run `pi` once to configure your LLM API key (Anthropic, OpenAI, etc.)
+> 3. Then run `bun manifest spark init` in this project
+> 4. Start a fresh Pi session — Spark will load automatically
+>
+> This is optional — your project works fine without it. But once it's running, you'll wonder how you ever built without an agent watching your back.
+
+Don't push. Mention it, move on.
+
+### Step 6: What They Want to Build
+
 Go back to what the user said they're building in the beginning. Decide which path to take:
 
 **Path A: Simple enough to one-shot.** If what they described is a straightforward API — a few CRUD endpoints, a simple webhook, a basic service — and you're confident you can build it correctly in one go, just do it. Scaffold the features, write the implementations, write the tests, run them, update the manifest. Show them what you built and explain the patterns as you go. This is the best way to teach — they see a real, working implementation following all the conventions.
@@ -397,7 +436,9 @@ If you're one-shotting it:
 
 Then hand off:
 
-> That's your project — [N] features, tested and indexed. Start a fresh session when you want to keep building. The agent will read `CLAUDE.md` and know exactly how to work here.
+> That's your project — [N] features, tested and indexed.
+>
+> **Start a fresh session before you keep building.** When a new session starts, it loads everything cleanly — `CLAUDE.md` for conventions and available skills. If you set up Spark in the previous step, the sidekick extension also loads and proactively orients itself — reading `MANIFEST.md`, `AGENTS.md`, and skimming your feature files so it understands the codebase before any errors come in.
 
 ### Path B: Hand Off
 
@@ -405,11 +446,11 @@ If the project needs real architecture work:
 
 > Your Manifest project is set up: framework, config, tests passing, manifest indexed. Here's what to do next:
 >
-> 1. Start a fresh session in this directory. The agent will read `CLAUDE.md` and understand the conventions.
+> 1. **Start a fresh session in this directory.** This is important — a new session loads everything cleanly: `CLAUDE.md` for conventions and available skills. If you set up Spark in the previous step, the sidekick extension also loads and proactively orients itself — reading `MANIFEST.md`, `AGENTS.md`, and skimming feature files so the agent knows your project before you even ask it to do anything.
 > 2. Tell it what you're building. It has the full context of how Manifest works — one feature per file, explicit inputs, declared side effects.
 > 3. Let it scaffold features with `bun manifest make:feature` and build from there.
 >
-> The framework is ~1,000 lines in `manifest/`. The conventions are in `CLAUDE.md`. The index is in `MANIFEST.md`. Everything the next agent needs is already here.
+> The framework is ~3,100 lines in `manifest/`. The conventions are in `CLAUDE.md`. The index is in `MANIFEST.md`. Everything the next agent needs is already here.
 
 ---
 

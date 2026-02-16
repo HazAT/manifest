@@ -324,7 +324,7 @@ bun manifest spark resume                 # Let Spark process events again
 
 ### Starting Spark
 
-Spark is a [Pi](https://github.com/badlogic/pi-mono) agent with the Spark extension loaded. Pi ships as a project dependency.
+Spark is a [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) agent with the Spark extension loaded. Pi ships as a project dependency.
 
 ```bash
 # Terminal 1: your app

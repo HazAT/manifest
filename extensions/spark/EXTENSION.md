@@ -23,7 +23,7 @@ config:
 
 # Spark
 
-A reactive AI sidekick that watches your Manifest app for errors and injects them into a [Pi](https://github.com/nickarbon/pi-coding-agent) agent session. When your app throws a 500 or an unhandled exception, Spark captures the error with full context — feature name, route, stack trace, trace ID — and delivers it to Pi so it can investigate and (in development) fix the issue automatically.
+A reactive AI sidekick that watches your Manifest app for errors and injects them into a [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) agent session. When your app throws a 500 or an unhandled exception, Spark captures the error with full context — feature name, route, stack trace, trace ID — and delivers it to Pi so it can investigate and (in development) fix the issue automatically.
 
 ---
 
@@ -64,6 +64,14 @@ You'll need an API key for your preferred LLM provider (Anthropic, OpenAI, etc.)
 2. Trigger a 500 error (e.g., call a feature that hits a missing database)
 3. Check that an event file appears in `.spark/events/`
 4. If Pi is running, look for the error context appearing in your Pi session
+
+### 4. Start a fresh session
+
+After running `spark init`, **start a new Pi session** (close and reopen `bunx pi`). This ensures the Spark extension is loaded from the start with full context — system prompt, skills, and project awareness all wired in correctly.
+
+On first startup in a new project, Spark will proactively orient itself: reading `AGENTS.md`, `MANIFEST.md`, scanning available skills, and building familiarity with the codebase. This takes a moment but means Spark is ready to act on errors with full context — not flying blind.
+
+> **Already in a Pi session when you ran `spark init`?** You can continue, but the Spark extension won't be active until you restart. Start a fresh session to get the full experience.
 
 ---
 
