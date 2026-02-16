@@ -29,7 +29,7 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 export interface FeatureOptions<TInput = Record<string, unknown>> {
   name: string
   description: string
-  route: [HttpMethod, string] | []
+  route?: [HttpMethod, string]
   type?: 'request' | 'event'
   trigger?: string
   authentication?: 'none' | 'required' | 'optional'
@@ -45,7 +45,7 @@ export interface FeatureOptions<TInput = Record<string, unknown>> {
 export interface FeatureDef<TInput = Record<string, unknown>> {
   name: string
   description: string
-  route: [HttpMethod, string] | []
+  route?: [HttpMethod, string]
   type: 'request' | 'event'
   trigger?: string
   authentication: 'none' | 'required' | 'optional'

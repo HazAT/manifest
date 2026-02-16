@@ -49,7 +49,7 @@ export async function indexManifest(_args: string[]): Promise<void> {
   md += `|------|-------|------|-------------|\n`
 
   for (const feature of features) {
-    const route = feature.route.length > 0
+    const route = feature.route
       ? `${feature.route[0]} ${feature.route[1]}`
       : ('trigger' in feature ? (feature as any).trigger : 'n/a')
     const desc = feature.description.replace(/\s+/g, ' ').slice(0, 80)

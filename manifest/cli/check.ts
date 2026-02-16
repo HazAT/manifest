@@ -38,7 +38,7 @@ export async function check(_args: string[]): Promise<number> {
       issues.push(`Feature '${name}' is missing sideEffects declaration. → Add sideEffects: [] to defineFeature() in ${featureFile}.`)
     }
 
-    if (feature.type === 'request' && feature.route.length === 0) {
+    if (feature.type === 'request' && !feature.route) {
       issues.push(`Feature '${name}' is type 'request' but has no route. → Add route: ['METHOD', '/api/path'] to defineFeature() in ${featureFile}.`)
     }
 
@@ -49,7 +49,7 @@ export async function check(_args: string[]): Promise<number> {
       if ((feature as any).handle) {
         issues.push(`Feature '${name}' is type 'stream' but has a handle() function. Stream features must use stream() instead. → Replace handle() with stream() in ${featureFile}.`)
       }
-      if ((feature.route as any[]).length === 0) {
+      if (!feature.route) {
         issues.push(`Feature '${name}' is type 'stream' but has no route. Stream features require a route. → Add route: ['GET', '/api/path'] to defineFeature() in ${featureFile}.`)
       }
     }
@@ -70,7 +70,7 @@ export async function check(_args: string[]): Promise<number> {
       issues.push(`Feature '${name}' has no test file. → Create tests/${testPascal}.test.ts mirroring ${featureFile}.`)
     }
 
-    if (feature.route.length > 0) {
+    if (feature.route) {
       const routeKey = `${feature.route[0]} ${feature.route[1]}`
       if (routes.has(routeKey)) {
         const otherName = routes.get(routeKey)!

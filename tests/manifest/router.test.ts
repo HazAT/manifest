@@ -29,7 +29,7 @@ const features = {
     description: 'Internal event.',
     type: 'event' as const,
     trigger: 'order.shipped',
-    route: [],
+    route: undefined,
     input: {},
     async handle({ ok }) { return ok('Sent') },
   }),

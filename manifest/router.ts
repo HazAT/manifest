@@ -24,10 +24,9 @@ export function createRouter(registry: Record<string, AnyFeatureDef>): Router {
   const entries: RouteEntry[] = []
 
   for (const feature of Object.values(registry)) {
-    const route = feature.route as unknown as unknown[]
-    if (!Array.isArray(route) || route.length < 2) continue
+    if (!feature.route) continue
 
-    const [method, pattern] = feature.route as [HttpMethod, string]
+    const [method, pattern] = feature.route
     const segments = splitPath(pattern)
     const paramNames: string[] = []
 
