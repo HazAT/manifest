@@ -30,7 +30,7 @@ export interface FeatureOptions<TInput = Record<string, unknown>> {
   name: string
   description: string
   route: [HttpMethod, string] | []
-  type?: 'request' | 'action' | 'event'
+  type?: 'request' | 'event'
   trigger?: string
   authentication?: 'none' | 'required' | 'optional'
   sideEffects?: string[]
@@ -46,7 +46,7 @@ export interface FeatureDef<TInput = Record<string, unknown>> {
   name: string
   description: string
   route: [HttpMethod, string] | []
-  type: 'request' | 'action' | 'event'
+  type: 'request' | 'event'
   trigger?: string
   authentication: 'none' | 'required' | 'optional'
   sideEffects: string[]
@@ -124,7 +124,7 @@ export type AnyFeatureDef = FeatureDef | StreamFeatureDef
  *   - sideEffects: []
  *   - errorCases: []
  *
- * Accepts both request/action/event features (with handle()) and
+ * Accepts both request/event features (with handle()) and
  * stream features (with stream()). The returned type discriminates
  * on the `type` field.
  */
