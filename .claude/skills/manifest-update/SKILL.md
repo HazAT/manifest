@@ -5,7 +5,7 @@ description: Update your Manifest project from the upstream base repository. Use
 
 # Manifest Update
 
-Update your Manifest project from the upstream base repository.
+Update your Manifest project from the upstream Manifest repository using interactive cherry-pick.
 
 **When to use:** The user says "manifest update", "update from upstream", "pull upstream changes", or similar.
 
@@ -13,143 +13,204 @@ Update your Manifest project from the upstream base repository.
 
 ## Philosophy
 
-Manifest ships as source code in your project. You own it. You may have modified framework files, added features, changed conventions. A blind `git merge` from upstream will create conflicts and break things.
+You control what enters your app. The agent reads upstream commits, batches them by area, detects dependencies, and recommends what to pick or skip — but **you decide**. Cherry-pick over rebase: selective, intentional, no surprises.
 
-Instead, you read what upstream changed, understand the intent, and rebase your local work on top of upstream so your commits stay clean and linear.
+The `manifest` branch is your local read-only copy of the upstream framework. `main` is your application. Updates flow from `manifest-upstream` remote → `manifest` branch → cherry-pick onto `main`.
 
 ## Steps
 
-### 1. Set Up the Upstream Remote (if not already done)
+### 1. Ensure Setup Is Correct
+
+Verify the two-branch model is in place:
 
 ```bash
-git remote get-url upstream 2>/dev/null || git remote add upstream https://github.com/hazat/manifest.git
+# Check manifest-upstream remote
+git remote get-url manifest-upstream 2>/dev/null || echo "MISSING"
+
+# Check manifest branch exists
+git branch --list manifest | grep -q manifest || echo "MISSING"
 ```
 
-### 2. Fetch Upstream
+**If `manifest-upstream` remote is missing:**
 
 ```bash
-git fetch upstream main
+git remote add manifest-upstream https://github.com/HazAT/manifest.git
 ```
 
-### 3. Read the Upstream Commits
+**If `manifest` branch is missing (migration from old setup):**
 
-This is the critical step. **Do not merge or rebase yet.** Read what changed:
+The user likely cloned with the old flow (no branch separation). Offer migration:
 
 ```bash
-# See all commits since this project diverged from upstream
-git log --oneline HEAD..upstream/main
+# Fetch upstream so we have a reference
+git fetch manifest-upstream
+
+# Create manifest branch from upstream's main
+git branch manifest manifest-upstream/main
 ```
 
-Then read each commit message carefully:
+If the old `upstream` remote exists, clean it up:
 
 ```bash
-# Read full commit messages with context
-git log --format="medium" HEAD..upstream/main
+git remote remove upstream 2>/dev/null
 ```
 
-For each commit, understand:
-- **What** changed (which files, which concepts)
-- **Why** it changed (the reasoning in the commit body)
-- **Migration notes** (any instructions in the commit body about what to update)
+### 2. Sync the Manifest Branch
 
-### 4. Review the Actual Diff
+Fast-forward `manifest` to match upstream:
 
 ```bash
-# File-by-file summary of what's new upstream
-git diff HEAD...upstream/main --stat
+git fetch manifest-upstream
+git checkout manifest
+git merge --ff-only manifest-upstream/main
+git checkout -    # back to previous branch
 ```
 
-If specific files look important, read them individually:
+**If fast-forward fails:** Someone committed directly to the `manifest` branch. This should never happen — `manifest` is a read-only mirror. Warn the user and abort. They need to manually resolve (likely `git reset --hard manifest-upstream/main` on the `manifest` branch after backing up any commits they want to keep).
+
+### 3. Discover What's New
+
+Find commits on `manifest` that haven't been cherry-picked onto `main` yet.
+
+**If a `manifest-sync-*` tag exists** (previous update was done):
 
 ```bash
-git diff HEAD...upstream/main -- manifest/router.ts
+# Find the most recent sync tag
+LAST_SYNC=$(git tag -l 'manifest-sync-*' --sort=-creatordate | head -1)
+git log --oneline "$LAST_SYNC"..manifest
 ```
 
-### 5. Identify Overlap Between Local and Upstream Changes
-
-Find which files **both sides** modified — these are potential conflict zones:
+**If no sync tag exists** (first time):
 
 ```bash
-MERGE_BASE=$(git merge-base HEAD upstream/main)
-comm -12 <(git diff --name-only $MERGE_BASE HEAD | sort) <(git diff --name-only $MERGE_BASE upstream/main | sort)
+git log --oneline main..manifest
 ```
 
-For each overlapping file, review both versions to understand the divergence:
+Read the **full commit messages** for every new commit — the body contains context about what changed and why:
 
 ```bash
-git diff HEAD upstream/main -- path/to/file
+git log --format="medium" "$LAST_SYNC"..manifest
+# or for first time:
+git log --format="medium" main..manifest
 ```
 
-Also check `git diff --name-only $MERGE_BASE HEAD` to see the full list of local changes.
+If there are no new commits, tell the user they're up to date and stop.
 
-### 6. Stash Uncommitted Work
+### 4. Batch and Categorize
 
-If there are uncommitted changes, stash them before rebasing:
+Group commits by the area they touch:
+
+| Area | Path pattern | Description |
+|------|-------------|-------------|
+| **Framework** | `manifest/` (excluding `manifest/cli/`) | Core framework improvements |
+| **CLI** | `manifest/cli/` | Command enhancements |
+| **Skills** | `.claude/skills/` | Prompt and workflow refinements |
+| **Docs** | `AGENTS.md`, `SPARK.md`, `README.md` | Documentation updates |
+| **Extensions** | `extensions/` | New or updated extensions |
+| **Config** | `config/` | Config structure changes |
+
+**Detect dependencies between commits:**
+- If commit B modifies a file that commit A created → they're linked
+- If commit B's message references commit A → they're linked
+- Present linked commits as an **atomic batch**: "pick all or none"
+
+A single commit touching multiple areas goes into whichever area has the most significant changes.
+
+### 5. Present Recommendations
+
+For each batch, present:
+
+```
+### Batch 1: Framework — Router improvements
+Commits: abc1234, def5678
+Files: manifest/router.ts, manifest/server.ts
+Recommendation: **Pick** ✅
+Reasoning: Adds path parameter validation. No conflicts with local changes.
+
+### Batch 2: Docs — Updated AGENTS.md
+Commits: 111aaaa
+Files: AGENTS.md
+Recommendation: **Review carefully** ⚠️
+Reasoning: You've customized AGENTS.md. Cherry-pick will likely conflict.
+Compare your version with upstream before deciding.
+
+### Batch 3: Skills — New brainstorm skill
+Commits: 222bbbb, 333cccc (linked — 333cccc depends on 222bbbb)
+Files: .claude/skills/brainstorm/SKILL.md
+Recommendation: **Pick** ✅
+Reasoning: New file, no conflicts possible.
+```
+
+**Before recommending**, check if the user has modified any of the files that upstream commits touch:
 
 ```bash
-git stash
+# For each file in a batch, check if main has diverged from the common ancestor
+MERGE_BASE=$(git merge-base main manifest)
+git diff --name-only "$MERGE_BASE" main -- <file>
 ```
 
-**Important:** The stash pop after rebase can also produce conflicts if stashed files were modified by upstream. Resolve those the same way as rebase conflicts.
+If a file was modified locally, flag the batch as "Review carefully" and explain what the user changed vs what upstream changed.
 
-### 7. Rebase onto Upstream
+**Ask the user which batches to take.** Never auto-pick everything.
 
-Rebase replays your local commits on top of upstream, keeping history linear:
+### 6. Cherry-Pick Selected Batches
+
+Apply the user's chosen commits in order:
 
 ```bash
-git rebase upstream/main
+git cherry-pick <hash1> <hash2> ...
 ```
 
-**Critical: avoid vim.** When `git rebase --continue` needs a commit message (after resolving a conflict), it opens an editor. Use `GIT_EDITOR=true` to accept the existing message without blocking:
+**If a cherry-pick conflicts:**
+
+1. Read both versions of the conflicted file
+2. Determine the right resolution:
+   - **Framework file the user hasn't customized** → accept upstream's version
+   - **Framework file the user has customized** → merge both changes, preserving the user's customizations while incorporating the upstream improvement
+   - **App-specific file** (`VISION.md`, user features, user services) → keep the user's version
+3. Resolve, stage, and continue:
 
 ```bash
-GIT_EDITOR=true git rebase --continue
+# After editing the conflicted file
+git add <resolved-file>
+GIT_EDITOR=true git cherry-pick --continue
 ```
 
-### 8. Resolve Conflicts
+Always use `GIT_EDITOR=true` to avoid blocking on an interactive editor.
 
-When a conflict occurs, the rebase pauses. For each conflicted file, decide:
-
-**A. Keep upstream's version** — You haven't meaningfully customized this file. The upstream change is the right one.
+If a cherry-pick is hopelessly conflicted, abort it and tell the user:
 
 ```bash
-git checkout --ours path/to/file    # "ours" = upstream during rebase
+git cherry-pick --abort
 ```
 
-**B. Keep your version** — This is project-specific (e.g., your Dockerfile, your deployment config).
+### 7. Tag the Sync Point
+
+After all selected commits are applied, tag so the next update knows where to start:
 
 ```bash
-git checkout --theirs path/to/file  # "theirs" = your commits during rebase
+git tag manifest-sync-$(date +%Y-%m-%d)
 ```
 
-**C. Manual merge** — Both sides made meaningful changes. Edit the file to combine them, removing conflict markers.
-
-⚠️ **Rebase flips ours/theirs!** During a rebase:
-- `--ours` = the branch you're rebasing **onto** (upstream)
-- `--theirs` = the commits being **replayed** (your local work)
-
-This is the opposite of a normal merge. Double-check which version you're keeping.
-
-After resolving all conflicts in a step:
+If a tag for today already exists, append a sequence number:
 
 ```bash
-git add <resolved-files>
-GIT_EDITOR=true git rebase --continue
+# Check if today's tag exists
+DATE=$(date +%Y-%m-%d)
+if git tag -l "manifest-sync-$DATE" | grep -q .; then
+  SEQ=2
+  while git tag -l "manifest-sync-$DATE-$SEQ" | grep -q .; do
+    SEQ=$((SEQ + 1))
+  done
+  git tag "manifest-sync-$DATE-$SEQ"
+else
+  git tag "manifest-sync-$DATE"
+fi
 ```
 
-### 9. Pop the Stash
+### 8. Verify
 
-If you stashed in step 6:
-
-```bash
-git stash pop
-```
-
-If the stash pop has conflicts, resolve them the same way — edit the files, remove conflict markers, then `git add` the resolved files and `git stash drop`.
-
-### 10. Test
-
-After the rebase is complete and stash is restored:
+Run the standard checks to make sure nothing broke:
 
 ```bash
 bun test
@@ -157,23 +218,17 @@ bunx tsc --noEmit
 bun run manifest check
 ```
 
-All three must pass.
-
-### 11. Update MANIFEST.md
-
-If framework files changed:
-
-```bash
-bun run manifest index
-```
+All three must pass. If something fails, investigate and fix before considering the update complete.
 
 ---
 
 ## Rules
 
-- **Prefer rebase over merge.** Keeps history linear and your commits on top.
-- **Always use `GIT_EDITOR=true`** when running `git rebase --continue` to avoid blocking on an interactive editor.
-- **Never force-apply upstream changes over local customizations.** If you've deliberately changed a file (Dockerfile, deployment config, etc.), keep your version.
-- **Always read the commits first.** Understand what upstream changed before touching anything.
-- **Always test after the rebase.** `bun test`, `bunx tsc --noEmit`, `bun run manifest check`.
-- **It's okay to keep your version.** Upstream serves as reference and inspiration, not law. Project-specific files (Docker, nginx, deployment) are yours.
+- **Never auto-pick everything.** The agent recommends, the user decides.
+- **Never modify the `manifest` branch.** It's a read-only mirror of upstream.
+- **Always tag after syncing** so the next update knows where to start.
+- **Always use `GIT_EDITOR=true`** when git commands might open an editor.
+- **Always read commits first.** Understand what upstream changed before applying anything.
+- **Always test after cherry-picking.** `bun test`, `bunx tsc --noEmit`, `bun run manifest check`.
+- **Warn about local modifications.** If the user has customized files that upstream also changed, flag it before cherry-picking.
+- **Preserve app identity.** `VISION.md`, user features, user services, and deployment configs are the user's — never overwrite them with upstream versions.
