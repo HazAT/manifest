@@ -565,10 +565,8 @@ if (import.meta.main) {
     console.error('❌ Spark is disabled (enabled: false in config/spark.ts). Cannot start sidecar.')
     process.exit(1)
   }
-  // A non-empty token implicitly enables the web UI (useful for Docker/env-only config)
-  const webEnabled = sparkConfig.web?.enabled || !!sparkConfig.web?.token
-  if (!webEnabled) {
-    console.error('❌ Spark web UI is not enabled. Set web.enabled: true and SPARK_WEB_TOKEN in config/spark.ts')
+  if (!sparkConfig.web?.enabled) {
+    console.error('❌ Spark web UI is not enabled. Set web.enabled: true in config/spark.ts')
     process.exit(1)
   }
   if (!sparkConfig.web.token) {
