@@ -7,6 +7,7 @@ export default defineFeature({
                 default demo feature that ships with every Manifest project.`,
   route: ['GET', '/api/hello'],
   authentication: 'none',
+  rateLimit: { max: 5, windowSeconds: 10 },
   sideEffects: [],
   errorCases: [],
 

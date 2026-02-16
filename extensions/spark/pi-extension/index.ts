@@ -11,12 +11,16 @@ type SparkEvent = {
   feature?: string
   route?: string
   status?: number
-  error: { message: string; stack?: string }
+  error?: { message: string; stack?: string }
   request?: { input?: Record<string, unknown> }
   command?: string
   exitCode?: number
   logFile?: string
   tail?: string
+  ip?: string
+  limit?: { max: number; windowSeconds: number }
+  remaining?: number
+  retryAfter?: number
 }
 
 type PauseInfo = {
@@ -64,13 +68,20 @@ export default function spark(pi: ExtensionAPI) {
         lines.push(event.tail)
         lines.push('```')
       }
+    } else if (event.type === 'rate-limit') {
+      lines.push(`**rate-limit**${event.feature ? ` on \`${event.feature}\`` : ''}${event.route ? ` — ${event.route}` : ''}`)
+      if (event.ip) lines.push(`IP: ${event.ip}`)
+      if (event.limit) lines.push(`Limit: ${event.limit.max} req / ${event.limit.windowSeconds}s`)
+      if (event.retryAfter) lines.push(`Retry after: ${event.retryAfter}s`)
     } else {
       lines.push(`**${event.type}**${event.feature ? ` in \`${event.feature}\`` : ''}${event.route ? ` — ${event.route}` : ''}`)
       if (event.status) lines.push(`Status: ${event.status}`)
-      lines.push(`Error: ${event.error.message}`)
-      if (event.error.stack) {
-        const truncated = event.error.stack.split('\n').slice(0, 8).join('\n')
-        lines.push('```\n' + truncated + '\n```')
+      if (event.error) {
+        lines.push(`Error: ${event.error.message}`)
+        if (event.error.stack) {
+          const truncated = event.error.stack.split('\n').slice(0, 8).join('\n')
+          lines.push('```\n' + truncated + '\n```')
+        }
       }
     }
 
