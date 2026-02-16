@@ -439,6 +439,32 @@ When the Manifest base repo adds a new capability, you don't `git merge`. Your a
 
 ---
 
+## Deployment
+
+The repo includes a `Dockerfile`, `docker-compose.yml`, and `docker-entrypoint.sh`. One command:
+
+```bash
+docker compose up --build
+```
+
+Your app runs on port 8080. That's it.
+
+### Environment variables
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `PORT` | `8080` | App server port |
+| `NODE_ENV` | `production` | Environment mode |
+| `SPARK_WEB_TOKEN` | *(empty)* | Auth token for Spark dashboard |
+| `SPARK_WEB_PORT` | `8081` | Spark dashboard port |
+| `ANTHROPIC_API_KEY` | *(empty)* | API key for Spark's AI agent |
+
+Without `SPARK_WEB_TOKEN`, the container runs just your app. With it, you also get the Spark web dashboard on port 8081 — an AI sidekick that watches your running app and investigates errors in real time.
+
+> **🔥 Want Spark in production?** Set both `SPARK_WEB_TOKEN` and `ANTHROPIC_API_KEY` in your environment. The entrypoint script starts the Spark sidecar automatically — no extra containers, no extra config.
+
+---
+
 ## Extensions
 
 Extensions are shared functionality that follows Manifest conventions. Authentication, payment processing, email — things many projects need and shouldn't reinvent.
@@ -576,7 +602,7 @@ Coming next:
 - ⬜ Rate limiting
 - ⬜ Event-triggered features
 - ⬜ Agent sidecar (error tracking integration, self-healing loop)
-- ⬜ Docker deployment
+- ✅ Docker deployment
 
 ---
 
