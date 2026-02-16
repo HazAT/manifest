@@ -2,6 +2,7 @@ import { createManifestServer } from './manifest'
 
 // Conditionally initialize Spark Web UI
 let sparkWebHandler: { routes: any[]; websocket: any } | null = null
+let sparkWebPath: string | null = null
 try {
   const sparkConfig = (await import('./config/spark')).default
   if (sparkConfig.web?.enabled) {
@@ -16,6 +17,7 @@ try {
         web: sparkConfig.web,
         projectDir: import.meta.dir,
       })
+      sparkWebPath = sparkConfig.web.path
     }
   }
 } catch (err) {
@@ -29,9 +31,8 @@ const server = await createManifestServer({
 })
 
 console.log(`🔧 Manifest server running on http://localhost:${server.port}`)
-if (sparkWebHandler) {
-  const sparkConfig = (await import('./config/spark')).default
-  console.log(`⚡ Spark web UI at http://localhost:${server.port}${sparkConfig.web.path}/`)
+if (sparkWebHandler && sparkWebPath) {
+  console.log(`⚡ Spark web UI at http://localhost:${server.port}${sparkWebPath}/`)
 }
 console.log(`   Production is our dev environment.`)
 

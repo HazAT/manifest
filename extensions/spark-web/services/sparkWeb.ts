@@ -1,5 +1,6 @@
 import path from 'path'
 import fs from 'fs'
+import crypto from 'crypto'
 import type { CustomRoute } from '../../../manifest/server'
 
 /**
@@ -53,6 +54,12 @@ export async function createSparkWeb(config: SparkWebConfig): Promise<{
       cachedHtml = fs.readFileSync(htmlPath, 'utf-8')
     }
     return cachedHtml
+  }
+
+  /** Constant-time token comparison to prevent timing attacks. */
+  function safeTokenCompare(a: string, b: string): boolean {
+    if (a.length !== b.length) return false
+    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))
   }
 
   // Connected WebSocket clients
@@ -168,7 +175,7 @@ export async function createSparkWeb(config: SparkWebConfig): Promise<{
       // Dashboard HTML
       if (pathname === dashboardPath || pathname === dashboardPath + '/') {
         const token = url.searchParams.get('token')
-        if (token !== config.web.token) {
+        if (!token || !safeTokenCompare(token, config.web.token)) {
           return new Response('Unauthorized', { status: 401 })
         }
         return new Response(getHtml(), {
@@ -179,7 +186,7 @@ export async function createSparkWeb(config: SparkWebConfig): Promise<{
       // WebSocket upgrade
       if (pathname === wsPath) {
         const token = url.searchParams.get('token')
-        if (token !== config.web.token) {
+        if (!token || !safeTokenCompare(token, config.web.token)) {
           return new Response('Unauthorized', { status: 401 })
         }
         const upgraded = server.upgrade(req, { data: { token } })

@@ -11,9 +11,16 @@ import manifestConfig from '../config/manifest'
 
 const textEncoder = new TextEncoder()
 
+/** A Bun WebSocket instance with optional attached data. */
+export interface BunWebSocket<T = unknown> {
+  send(data: string | ArrayBuffer | Uint8Array): void
+  close(code?: number, reason?: string): void
+  data?: T
+}
+
 export interface CustomRoute {
   prefix: string
-  handle: (req: Request, server: any) => Promise<Response | null | undefined>
+  handle: (req: Request, server: import('bun').Server) => Promise<Response | null | undefined>
 }
 
 export interface ManifestServerOptions {
@@ -21,9 +28,9 @@ export interface ManifestServerOptions {
   port?: number
   customRoutes?: CustomRoute[]
   websocket?: {
-    open?: (ws: any) => void
-    message?: (ws: any, message: string | Buffer) => void
-    close?: (ws: any) => void
+    open?: (ws: BunWebSocket) => void
+    message?: (ws: BunWebSocket, message: string | Buffer) => void
+    close?: (ws: BunWebSocket) => void
   }
 }
 
@@ -83,9 +90,8 @@ export async function createManifestServer(options: ManifestServerOptions) {
 
   let server: ReturnType<typeof Bun.serve>
   try {
-    const serveOptions: any = {
+    const serveOptions: Record<string, unknown> = {
     port: requestedPort,
-    fetch: undefined as any, // assigned below
     }
     if (options.websocket) {
       serveOptions.websocket = options.websocket
