@@ -11,11 +11,12 @@ export default {
   includeMetaInResponses: true,
   includeDurationInMeta: true,
 
-  // Rate limiting (not yet implemented)
-  rateLimitDriver: 'memory' as const,
-  rateLimitPrefix: 'manifest:',
+  // --- Not yet implemented ---
+  // Uncomment when rate limiting is added to the framework:
+  // rateLimitDriver: 'memory' as const,
+  // rateLimitPrefix: 'manifest:',
 
-  // Real-time (not yet implemented)
-  sseHeartbeatSeconds: 15,
-  sseMaxConnectionSeconds: 300,
+  // Uncomment when SSE connection management is added:
+  // sseHeartbeatSeconds: 15,
+  // sseMaxConnectionSeconds: 300,
 }
