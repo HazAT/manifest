@@ -233,26 +233,16 @@ bun test
 
 If tests pass, say how many passed. If any fail, investigate and fix.
 
-Then start the server to verify it responds. **Use tmux** — don't background with `&`. The server and frontend watcher produce continuous output that blocks backgrounded bash commands.
+Then briefly start the server to verify it responds. **Redirect output to `/dev/null`** — the server and frontend watcher produce continuous output that hangs bare `&` backgrounding.
 
 ```bash
-# Start server in tmux so it doesn't block
-SOCKET_DIR=${TMPDIR:-/tmp}/pi-tmux-sockets
-mkdir -p "$SOCKET_DIR"
-SOCKET="$SOCKET_DIR/pi.sock"
-tmux -S "$SOCKET" new -d -s spark-verify -n shell
-tmux -S "$SOCKET" send-keys -t spark-verify:0.0 -- 'bun index.ts' Enter
+# Start server in background, silencing output so it doesn't hang
+bun index.ts > /dev/null 2>&1 &
+SERVER_PID=$!
 sleep 2
-
-# Test the API
 curl -s http://localhost:8080/api/hello?name=World
-
-# Kill the server
-tmux -S "$SOCKET" send-keys -t spark-verify:0.0 C-c
-tmux -S "$SOCKET" kill-session -t spark-verify
+kill $SERVER_PID 2>/dev/null
 ```
-
-**Do NOT use `bun index.ts &` with `kill $PID`.** The frontend watcher keeps the process alive and floods stdout, causing bash commands to hang indefinitely.
 
 Show the user the JSON response. Then:
 
@@ -264,17 +254,12 @@ Show the user the JSON response. Then:
 # Build the frontend first
 bun manifest frontend build
 
-# Start server in tmux
-tmux -S "$SOCKET" new -d -s spark-verify -n shell
-tmux -S "$SOCKET" send-keys -t spark-verify:0.0 -- 'bun index.ts' Enter
+# Start server and check the frontend is served
+bun index.ts > /dev/null 2>&1 &
+SERVER_PID=$!
 sleep 2
-
-# Check the frontend is served
 curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/
-
-# Clean up
-tmux -S "$SOCKET" send-keys -t spark-verify:0.0 C-c
-tmux -S "$SOCKET" kill-session -t spark-verify
+kill $SERVER_PID 2>/dev/null
 ```
 
 If the frontend build succeeds and the server returns 200 for `/`, tell the user:
