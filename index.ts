@@ -22,7 +22,7 @@ try {
           message: error.message,
           stack: error.stack,
         },
-      })
+      }).catch(() => {})
     })
 
     process.on('unhandledRejection', (reason) => {
@@ -34,7 +34,7 @@ try {
           message: error.message,
           stack: error.stack,
         },
-      })
+      }).catch(() => {})
     })
   }
 } catch {} // Spark setup must never prevent server from starting

@@ -62,7 +62,7 @@ export default function spark(pi: ExtensionAPI) {
   }
 
   function formatBatch(events: SparkEvent[]): string {
-    if (events.length === 1) return `🔥 **Spark Event**\n\n${formatEvent(events[0])}`
+    if (events.length === 1) return `🔥 **Spark Event**\n\n${formatEvent(events[0]!)}`
     const header = `🔥 **${events.length} Spark Events**\n`
     const body = events.map((e, i) => `### Event ${i + 1}\n${formatEvent(e)}`).join('\n\n')
     return `${header}\n${body}`
