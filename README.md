@@ -10,7 +10,7 @@ Paste this into your AI agent (Claude, Cursor, Copilot, any agent with terminal 
 Download and follow the steps from https://github.com/hazat/manifest/blob/main/SPARK.md
 ```
 
-That's it. Your agent becomes a setup guide called **Spark** that walks you through forking, configuring, and building your first feature.
+That's it. Your agent becomes a setup guide called **Spark** that walks you through cloning, configuring, and building your first feature.
 
 <details>
 <summary>Want to read what SPARK.md does before pasting? Smart. Click here.</summary>
@@ -18,8 +18,8 @@ That's it. Your agent becomes a setup guide called **Spark** that walks you thro
 SPARK.md is a prompt that turns your agent into a Manifest onboarding guide. It will:
 
 1. Check that Bun and git are installed
-2. Guide you to fork and clone the repo
-3. Help you rename the project to yours
+2. Clone the repo and make it yours
+3. Help you rename the project
 4. Verify the server runs and tests pass
 5. Walk you through building your first feature
 6. Hand off once you're set up
@@ -364,15 +364,20 @@ Paste this into your agent:
 
 > Download and follow the steps from https://github.com/hazat/manifest/blob/main/SPARK.md
 
-Your agent becomes **Spark** — a Manifest onboarding guide that walks you through forking, setting up, and building your first feature step by step.
+Your agent becomes **Spark** — a Manifest onboarding guide that walks you through cloning, setting up, and building your first feature step by step.
 
 ### The manual way
 
 ```bash
-# 1. Fork https://github.com/hazat/manifest on GitHub
-# 2. Clone your fork:
-git clone https://github.com/YOU/manifest.git my-app
+# 1. Clone the repo:
+git clone https://github.com/hazat/manifest.git my-app
 cd my-app
+
+# 2. Make it yours:
+rm -rf .git
+git init
+git add -A
+git commit -m "Initial commit from Manifest"
 bun install
 
 # Start developing
@@ -409,14 +414,15 @@ bun test
 
 ---
 
-## Fork It. It's Yours.
+## Clone It. It's Yours.
 
-Manifest doesn't install from npm. You fork the repo and start building.
+Manifest doesn't install from npm. You clone the repo and start building.
 
 ```bash
-# Fork on GitHub, then:
-git clone https://github.com/you/manifest-app my-project
+git clone https://github.com/hazat/manifest.git my-project
 cd my-project
+rm -rf .git
+git init && git add -A && git commit -m "Initial commit from Manifest"
 bun install
 bun --hot index.ts
 ```
@@ -425,11 +431,11 @@ The `manifest/` directory is now **your** framework. Your agent reads it, modifi
 
 This is intentional. Traditional frameworks maintain a boundary: framework code lives in `node_modules/`, application code lives in `src/`. You depend on the framework. You can't change it. When it breaks, you wait for a patch.
 
-Manifest erases that boundary. The 1,055 lines of framework code live in your project, committed to your repo, understood by your agent. When the router needs a new matching rule, the agent edits `manifest/router.ts`. When validation needs a new format, the agent edits `manifest/validator.ts`. No pull request to an upstream repo. No waiting.
+Manifest erases that boundary. The framework code lives in your project, committed to your repo, understood by your agent. When the router needs a new matching rule, the agent edits `manifest/router.ts`. When validation needs a new format, the agent edits `manifest/validator.ts`. No pull request to an upstream repo. No waiting.
 
 **What about upstream improvements?**
 
-When the Manifest base repo adds a new capability — say, SSE streaming support — you don't `git merge`. Your agent reads the upstream diff, understands the intent, and implements the idea in the context of what your project has become. That's how agents work. They don't need `git merge`, they need context. The upstream repo serves as a reference and inspiration, not a dependency.
+When the Manifest base repo adds a new capability, you don't `git merge`. Your agent reads the upstream diff, understands the intent, and implements the idea in the context of what your project has become. That's how agents work. They don't need `git merge`, they need context. The upstream repo serves as a reference and inspiration, not a dependency.
 
 ---
 
@@ -462,18 +468,26 @@ extensions/
 │       └── stripe.ts
 ```
 
-### Adding an extension
+### Managing extensions
 
 ```bash
-# Clone into extensions/
-cd extensions
-git clone https://github.com/manifest-ext/auth
-
-# Rebuild the manifest
-bun run manifest index
+bun run manifest extension install <source>   # Install an extension
+bun run manifest extension list               # List installed extensions
+bun run manifest extension make <name>        # Scaffold a new extension
+bun run manifest index                        # Rebuild the manifest
 ```
 
-That's it. The scanner picks up features from `extensions/*/features/`. They show up in `MANIFEST.md`. They follow the same conventions. `bun manifest check` validates them the same way.
+The scanner picks up features from `extensions/*/features/`. They show up in `MANIFEST.md`. They follow the same conventions. `bun manifest check` validates them the same way.
+
+### Shipped extensions
+
+| Extension | What it does |
+|-----------|-------------|
+| `manifest-frontend-static` | HTML + Tailwind + vanilla TS (content sites, landing pages) |
+| `manifest-frontend-reactive` | SolidJS + Tailwind (interactive apps, dashboards) |
+| `manifest-drizzle-postgres` | Drizzle ORM + Postgres (database access, migrations) |
+| `manifest-content-blog` | Markdown blog with static HTML output |
+| `manifest-sse-example` | SSE streaming demo with frontend guides |
 
 ### EXTENSION.md
 
@@ -543,21 +557,23 @@ The answer turns out to be the same things good engineering has always valued: e
 
 ## Status
 
-Manifest is in early development. The core framework is complete:
+Manifest is in active development. The core framework and key extensions are complete:
 
 - ✅ Feature system (`defineFeature`, typed inputs, `ok`/`fail` helpers)
 - ✅ Input validation (types, formats, constraints)
 - ✅ HTTP server (Bun.serve, routing, path params, JSON envelopes)
-- ✅ Test client (call features by name, no HTTP)
-- ✅ CLI (serve, index, check, make:feature)
+- ✅ SSE streaming (`type: 'stream'` features with `emit`/`close`/`fail`)
+- ✅ Test client (call features by name, no HTTP; stream testing)
+- ✅ CLI (serve, index, check, make:feature, frontend, extensions, doctor)
 - ✅ MANIFEST.md generation
 - ✅ Convention validation
+- ✅ Frontend support (static + reactive presets via extensions)
+- ✅ Drizzle ORM + Postgres (via `manifest-drizzle-postgres` extension)
+- ✅ Extensions ecosystem (make, install, list, scanner)
 
 Coming next:
-- ⬜ Drizzle ORM integration (schemas, migrations)
 - ⬜ Authentication & authorization
 - ⬜ Rate limiting
-- ⬜ SSE streaming features
 - ⬜ Event-triggered features
 - ⬜ Agent sidecar (error tracking integration, self-healing loop)
 - ⬜ Docker deployment

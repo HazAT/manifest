@@ -46,13 +46,17 @@ Built-in frontend support with preset extensions and Bun-native tooling.
 
 What you need to build something beyond HelloWorld. This turns Manifest from a framework demo into something you'd ship.
 
-### Database (Drizzle ORM integration)
+### ✅ Database (Drizzle ORM integration) — done
 
-- [ ] Database connection setup in `config/database.ts` (PostgreSQL + SQLite for dev)
-- [ ] Schema scaffolding: `bun manifest make:schema <Name>`
-- [ ] Example schema with JSDoc descriptions on every column
-- [ ] Migration generation via `drizzle-kit`
-- [ ] Database access helper (typed `db` object features import)
+Shipped as the `manifest-drizzle-postgres` extension. Provides Drizzle ORM + Postgres with templates for connection setup, schema scaffolding, migrations, and a shared `db` service.
+
+- [x] Database connection setup via `services/db.ts` (reads `DATABASE_URL`)
+- [x] Example schema with JSDoc descriptions on every column
+- [x] Migration generation via `drizzle-kit` (`generate` + `migrate`)
+- [x] Database access helper (typed `db` object features import)
+- [x] Full usage examples (select, insert, filter)
+- [x] Troubleshooting guide for common issues
+- [ ] Schema scaffolding CLI: `bun manifest make:schema <Name>`
 - [ ] Test database setup (SQLite in-memory for fast tests)
 - [ ] `createTestClient` gets `client.database` for inspecting rows in tests
 
