@@ -13,6 +13,10 @@ type SparkEvent = {
   status?: number
   error: { message: string; stack?: string }
   request?: { input?: Record<string, unknown> }
+  command?: string
+  exitCode?: number
+  logFile?: string
+  tail?: string
 }
 
 type PauseInfo = {
@@ -25,7 +29,7 @@ type SparkConfig = {
   enabled: boolean
   environment: string
   eventsDir: string
-  watch: { unhandledErrors: boolean; serverErrors: boolean }
+  watch: { unhandledErrors: boolean; serverErrors: boolean; processErrors: boolean }
   environments: Record<string, { tools: 'full' | 'readonly'; behavior: 'fix' | 'alert' }>
   pause: { staleThresholdMinutes: number }
   debounce: { windowMs: number }
@@ -50,13 +54,26 @@ export default function spark(pi: ExtensionAPI) {
 
   function formatEvent(event: SparkEvent): string {
     const lines: string[] = []
-    lines.push(`**${event.type}**${event.feature ? ` in \`${event.feature}\`` : ''}${event.route ? ` — ${event.route}` : ''}`)
-    if (event.status) lines.push(`Status: ${event.status}`)
-    lines.push(`Error: ${event.error.message}`)
-    if (event.error.stack) {
-      const truncated = event.error.stack.split('\n').slice(0, 8).join('\n')
-      lines.push('```\n' + truncated + '\n```')
+
+    if (event.type === 'process-error') {
+      lines.push(`**process-error** — \`${event.command || 'unknown'}\``)
+      if (event.exitCode !== undefined) lines.push(`Exit code: ${event.exitCode}`)
+      if (event.logFile) lines.push(`Log: ${event.logFile}`)
+      if (event.tail) {
+        lines.push('```')
+        lines.push(event.tail)
+        lines.push('```')
+      }
+    } else {
+      lines.push(`**${event.type}**${event.feature ? ` in \`${event.feature}\`` : ''}${event.route ? ` — ${event.route}` : ''}`)
+      if (event.status) lines.push(`Status: ${event.status}`)
+      lines.push(`Error: ${event.error.message}`)
+      if (event.error.stack) {
+        const truncated = event.error.stack.split('\n').slice(0, 8).join('\n')
+        lines.push('```\n' + truncated + '\n```')
+      }
     }
+
     if (event.traceId) lines.push(`Trace: ${event.traceId}`)
     return lines.join('\n')
   }
@@ -85,6 +102,7 @@ export default function spark(pi: ExtensionAPI) {
         watch: {
           unhandledErrors: !raw.includes('unhandledErrors: false'),
           serverErrors: !raw.includes('serverErrors: false'),
+          processErrors: !raw.includes('processErrors: false'),
         },
         environments: {
           development: { tools: 'full', behavior: 'fix' },
