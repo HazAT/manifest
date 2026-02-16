@@ -8,6 +8,8 @@ import { createStaticHandler, watchFrontend } from './frontend'
 import frontendConfig from '../config/frontend'
 import manifestConfig from '../config/manifest'
 
+const textEncoder = new TextEncoder()
+
 async function emitSparkError(opts: {
   requestId: string
   featureName: string
@@ -160,7 +162,7 @@ export async function createManifestServer(options: ManifestServerOptions) {
               const safeEnqueue = (chunk: string) => {
                 if (closed) return
                 try {
-                  controller.enqueue(new TextEncoder().encode(chunk))
+                  controller.enqueue(textEncoder.encode(chunk))
                 } catch {
                   closed = true
                 }
