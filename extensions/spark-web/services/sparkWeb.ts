@@ -1,21 +1,14 @@
 import path from 'path'
 import fs from 'fs'
 import crypto from 'crypto'
-import type { CustomRoute } from '../../../manifest/server'
 
 /**
- * Config shape for Spark Web UI. Mirrors config/spark.ts with projectDir added.
+ * Config shape for Spark Web sidecar. Mirrors config/spark.ts with projectDir added.
  */
-export interface SparkWebConfig {
-  enabled: boolean
+export interface SparkSidecarConfig {
   environment: string
   eventsDir: string
-  web: {
-    enabled: boolean
-    path: string
-    token: string
-    extensions?: string[]
-  }
+  web: { port: number; token: string; extensions?: string[] }
   projectDir: string
 }
 
@@ -25,43 +18,25 @@ type WebSocketClient = {
   data?: { token?: string }
 }
 
-/**
- * Creates the Spark Web service: an in-process Pi AgentSession with the Spark
- * extension loaded, bridged to browser clients via WebSocket.
- *
- * Returns custom routes and websocket handlers for the Manifest server,
- * or null if web UI is disabled or misconfigured.
- */
-export async function createSparkWeb(config: SparkWebConfig): Promise<{
-  routes: CustomRoute[]
-  websocket: {
-    open: (ws: WebSocketClient) => void
-    message: (ws: WebSocketClient, message: string | Buffer) => void
-    close: (ws: WebSocketClient) => void
-  }
-} | null> {
-  if (!config.web.enabled || !config.web.token) {
-    return null
-  }
+/** Constant-time token comparison to prevent timing attacks. */
+function safeTokenCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))
+}
 
-  const wsPath = config.web.path + '/ws'
-  const dashboardPath = config.web.path
+/**
+ * Starts the Spark Web sidecar: a standalone Bun.serve() that hosts the
+ * dashboard HTML, WebSocket bridge, and an in-process Pi AgentSession
+ * with the Spark extension loaded.
+ *
+ * Can be run directly: `bun extensions/spark-web/services/sparkWeb.ts`
+ */
+export async function startSparkSidecar(config: SparkSidecarConfig): Promise<void> {
+  const token = config.web.token
 
   // Cache the HTML file in memory
-  let cachedHtml: string | null = null
-  function getHtml(): string {
-    if (!cachedHtml) {
-      const htmlPath = path.resolve(__dirname, '../frontend/index.html')
-      cachedHtml = fs.readFileSync(htmlPath, 'utf-8')
-    }
-    return cachedHtml
-  }
-
-  /** Constant-time token comparison to prevent timing attacks. */
-  function safeTokenCompare(a: string, b: string): boolean {
-    if (a.length !== b.length) return false
-    return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))
-  }
+  const htmlPath = path.resolve(__dirname, '../frontend/index.html')
+  const cachedHtml = fs.readFileSync(htmlPath, 'utf-8')
 
   // Connected WebSocket clients
   const clients = new Set<WebSocketClient>()
@@ -87,7 +62,6 @@ export async function createSparkWeb(config: SparkWebConfig): Promise<{
       createAgentSession,
       DefaultResourceLoader,
       SessionManager,
-      SettingsManager,
       AuthStorage,
       ModelRegistry,
       createCodingTools,
@@ -108,7 +82,7 @@ export async function createSparkWeb(config: SparkWebConfig): Promise<{
     const modelRegistry = new ModelRegistry(authStorage)
 
     const settingsManager = packageSources.length > 0
-      ? SettingsManager.inMemory({ packages: packageSources })
+      ? (await import('@mariozechner/pi-coding-agent')).SettingsManager.inMemory({ packages: packageSources })
       : undefined
 
     const loader = new DefaultResourceLoader({
@@ -180,116 +154,134 @@ export async function createSparkWeb(config: SparkWebConfig): Promise<{
     sessionError = message
   }
 
-  // --- Route handler ---
-  const route: CustomRoute = {
-    prefix: config.web.path,
-    handle: async (req: Request, server: any): Promise<Response | null> => {
-      const url = new URL(req.url)
-      const pathname = url.pathname
+  // --- Start Bun.serve ---
+  try {
+    const server = Bun.serve({
+      port: config.web.port,
+      fetch(req, server) {
+        const url = new URL(req.url)
+        const pathname = url.pathname
 
-      // Dashboard HTML
-      if (pathname === dashboardPath || pathname === dashboardPath + '/') {
-        const token = url.searchParams.get('token')
-        if (!token || !safeTokenCompare(token, config.web.token)) {
-          return new Response('Unauthorized', { status: 401 })
+        // Dashboard HTML at root
+        if (pathname === '/' || pathname === '') {
+          const reqToken = url.searchParams.get('token')
+          if (!reqToken || !safeTokenCompare(reqToken, token)) {
+            return new Response('Unauthorized', { status: 401 })
+          }
+          return new Response(cachedHtml, {
+            headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          })
         }
-        return new Response(getHtml(), {
-          headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        })
-      }
 
-      // WebSocket upgrade
-      if (pathname === wsPath) {
-        const token = url.searchParams.get('token')
-        if (!token || !safeTokenCompare(token, config.web.token)) {
-          return new Response('Unauthorized', { status: 401 })
+        // WebSocket upgrade
+        if (pathname === '/ws') {
+          const reqToken = url.searchParams.get('token')
+          if (!reqToken || !safeTokenCompare(reqToken, token)) {
+            return new Response('Unauthorized', { status: 401 })
+          }
+          const upgraded = server.upgrade(req, { data: { token: reqToken } })
+          if (upgraded) return undefined as any
+          return new Response('WebSocket upgrade failed', { status: 500 })
         }
-        const upgraded = server.upgrade(req, { data: { token } })
-        if (upgraded) {
-          return undefined as any // Bun expects no response on successful upgrade
-        }
-        return new Response('WebSocket upgrade failed', { status: 500 })
-      }
 
-      // Pass through other /_spark/* paths
-      return null
-    },
-  }
+        return new Response('Not Found', { status: 404 })
+      },
+      websocket: {
+        open(ws: any) {
+          clients.add(ws)
 
-  // --- WebSocket handler ---
-  const websocket = {
-    open(ws: WebSocketClient) {
-      clients.add(ws)
-
-      // Send initial state
-      const stateData: Record<string, unknown> = {
-        environment: config.environment,
-        webPath: config.web.path,
-        sessionReady,
-        sessionError,
-        isStreaming: session?.isStreaming ?? false,
-        model: session?.model?.id ?? null,
-        messageCount: session?.messages?.length ?? 0,
-      }
-      try {
-        ws.send(JSON.stringify({ type: 'state', data: stateData }))
-      } catch {}
-
-      // Send message history
-      if (session && sessionReady) {
-        try {
-          ws.send(JSON.stringify({ type: 'messages', messages: session.messages }))
-        } catch {}
-      }
-    },
-
-    message(ws: WebSocketClient, message: string | Buffer) {
-      const raw = typeof message === 'string' ? message : message.toString()
-      let parsed: any
-      try {
-        parsed = JSON.parse(raw)
-      } catch {
-        return
-      }
-
-      if (!session || !sessionReady) {
-        try {
-          ws.send(JSON.stringify({
-            type: 'error',
-            message: sessionError || 'Agent session not available',
-          }))
-        } catch {}
-        return
-      }
-
-      if (parsed.type === 'prompt' && typeof parsed.message === 'string') {
-        const doPrompt = async () => {
+          // Send initial state
+          const stateData: Record<string, unknown> = {
+            environment: config.environment,
+            sessionReady,
+            sessionError,
+            isStreaming: session?.isStreaming ?? false,
+            model: session?.model?.id ?? null,
+            messageCount: session?.messages?.length ?? 0,
+          }
           try {
-            if (session.isStreaming) {
-              await session.followUp(parsed.message)
-            } else {
-              await session.prompt(parsed.message)
-            }
-          } catch (err: any) {
-            const errMsg = err instanceof Error ? err.message : String(err)
+            ws.send(JSON.stringify({ type: 'state', data: stateData }))
+          } catch {}
+
+          // Send message history
+          if (session && sessionReady) {
             try {
-              ws.send(JSON.stringify({ type: 'error', message: errMsg }))
+              ws.send(JSON.stringify({ type: 'messages', messages: session.messages }))
             } catch {}
           }
-        }
-        doPrompt()
-      } else if (parsed.type === 'abort') {
-        session.abort().catch(() => {})
-      }
-    },
+        },
 
-    close(ws: WebSocketClient) {
-      clients.delete(ws)
-    },
-  }
+        message(ws: any, message: string | Buffer) {
+          const raw = typeof message === 'string' ? message : message.toString()
+          let parsed: any
+          try {
+            parsed = JSON.parse(raw)
+          } catch {
+            return
+          }
 
-  return {
-    routes: [route],
-    websocket,
+          if (!session || !sessionReady) {
+            try {
+              ws.send(JSON.stringify({
+                type: 'error',
+                message: sessionError || 'Agent session not available',
+              }))
+            } catch {}
+            return
+          }
+
+          if (parsed.type === 'prompt' && typeof parsed.message === 'string') {
+            const doPrompt = async () => {
+              try {
+                if (session.isStreaming) {
+                  await session.followUp(parsed.message)
+                } else {
+                  await session.prompt(parsed.message)
+                }
+              } catch (err: any) {
+                const errMsg = err instanceof Error ? err.message : String(err)
+                try {
+                  ws.send(JSON.stringify({ type: 'error', message: errMsg }))
+                } catch {}
+              }
+            }
+            doPrompt()
+          } else if (parsed.type === 'abort') {
+            session.abort().catch(() => {})
+          }
+        },
+
+        close(ws: any) {
+          clients.delete(ws)
+        },
+      },
+    })
+
+    console.log(`⚡ Spark sidecar running on http://localhost:${server.port}`)
+  } catch (err: any) {
+    if (err?.code === 'EADDRINUSE' || err?.message?.includes('address already in use') || err?.errno === -48) {
+      console.log(`⚡ Spark sidecar already running on port ${config.web.port}`)
+      process.exit(0)
+    }
+    throw err
   }
+}
+
+// Direct execution support
+if (import.meta.main) {
+  const sparkConfig = (await import('../../../config/spark')).default
+  if (!sparkConfig.web?.enabled) {
+    console.error('⚡ Spark web UI is not enabled in config/spark.ts')
+    process.exit(1)
+  }
+  if (!sparkConfig.web.token) {
+    console.error('⚡ No SPARK_WEB_TOKEN set. Set it in environment or config/spark.ts')
+    process.exit(1)
+  }
+  await startSparkSidecar({
+    environment: sparkConfig.environment,
+    eventsDir: sparkConfig.eventsDir,
+    web: sparkConfig.web,
+    projectDir: path.resolve(__dirname, '../../..'),
+  })
 }

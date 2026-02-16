@@ -505,7 +505,7 @@
     setConnectionStatus('connecting');
 
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = proto + '//' + location.host + '/_spark/ws?token=' + encodeURIComponent(token);
+    const wsUrl = proto + '//' + location.host + '/ws?token=' + encodeURIComponent(token);
     ws = new WebSocket(wsUrl);
 
     ws.onopen = function() {
