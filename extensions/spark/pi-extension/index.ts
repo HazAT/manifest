@@ -68,14 +68,15 @@ export default function spark(pi: ExtensionAPI) {
   let agentId: string | undefined
   let agentFilePath: string | undefined
   let eventsPath: string | undefined
+  let agentStartedAt: string | undefined
 
-  async function writeAgentFile(status: 'idle' | 'working', startedAt?: string) {
-    if (!agentFilePath || !agentId) return
+  async function writeAgentFile(status: 'idle' | 'working') {
+    if (!agentFilePath || !agentId || !agentStartedAt) return
     const data = {
       id: agentId,
       pid: process.pid,
       status,
-      startedAt: startedAt || new Date().toISOString(),
+      startedAt: agentStartedAt,
       lastActivity: new Date().toISOString(),
     }
     const tmpPath = agentFilePath + '.tmp'
@@ -510,7 +511,8 @@ You understand Manifest conventions: features are in features/, one file per beh
       agentId = crypto.randomUUID()
       agentFilePath = path.join(agentsDir, `${agentId}.json`)
       eventsPath = eventsDir
-      await writeAgentFile('idle', new Date().toISOString())
+      agentStartedAt = new Date().toISOString()
+      await writeAgentFile('idle')
       await writeSparkEvent('agent-start', ctx.cwd)
     }
     report.push(`Environment: **${config.environment}** | Mode: **${profile.behavior}**`)
@@ -594,15 +596,30 @@ You understand Manifest conventions: features are in features/, one file per beh
       await scanAgentsDir(agentsDir) // Initial scan
       startAgentsWatcher(agentsDir)
     } else {
-      // Human mode: ambient status only
+      // Human mode: ambient status only — track known files to distinguish join from update
+      const knownAgentFiles = new Set<string>()
+      try {
+        const existing = await fsp.readdir(agentsDir)
+        for (const f of existing.filter(f => f.endsWith('.json'))) knownAgentFiles.add(f)
+      } catch {}
       try {
         agentsWatcher = fs.watch(agentsDir, (_eventType, filename) => {
           if (!filename?.endsWith('.json') || !agentId) return
           if (filename === `${agentId}.json`) return
           const filePath = path.join(agentsDir, filename)
           fsp.access(filePath).then(
-            () => showAmbientStatus('🤖 Another agent joined'),
-            () => showAmbientStatus('👋 Agent left')
+            () => {
+              if (!knownAgentFiles.has(filename)) {
+                knownAgentFiles.add(filename)
+                showAmbientStatus('🤖 Another agent joined')
+              }
+            },
+            () => {
+              if (knownAgentFiles.has(filename)) {
+                knownAgentFiles.delete(filename)
+                showAmbientStatus('👋 Agent left')
+              }
+            }
           )
         })
       } catch {}

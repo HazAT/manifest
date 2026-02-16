@@ -62,6 +62,7 @@ That's fine. When you add things, just try to keep them explicit and self-explan
 │   └── settings.json   # Points Pi to the Spark extension.
 ├── .spark/             # Runtime artifacts (gitignored).
 │   ├── events/         # Event files — the bus between your app and Spark.
+│   ├── agents/         # Agent presence files — tracks active Pi sessions.
 │   └── pause           # Pause file — signals "I'm working, back off."
 ├── tests/              # Mirrors features/ 1:1.
 └── index.ts            # Entry point.
