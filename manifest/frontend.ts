@@ -8,6 +8,9 @@ interface FrontendConfig {
   spaFallback: boolean
   devReload: boolean
   copyHtml: boolean
+  bundleCss?: boolean
+  postBuild?: string
+  watchDirs?: string[]
 }
 
 export interface BuildResult {
@@ -55,7 +58,20 @@ export async function buildFrontend(projectDir: string): Promise<BuildResult> {
 
   copyPublicDir(projectDir, outDir)
 
-  const outputs = result.outputs.map((o) => {
+  // Filter out CSS files if bundleCss is false
+  let filteredOutputs = result.outputs
+  if (config.bundleCss === false) {
+    for (const o of result.outputs) {
+      if (o.path.endsWith('.css') || o.path.endsWith('.css.map')) {
+        try { fs.unlinkSync(o.path) } catch {}
+      }
+    }
+    filteredOutputs = result.outputs.filter(
+      (o) => !o.path.endsWith('.css') && !o.path.endsWith('.css.map')
+    )
+  }
+
+  const outputs = filteredOutputs.map((o) => {
     const rel = path.relative(projectDir, o.path)
     const kb = (o.size / 1024).toFixed(1)
     console.log(`  ${rel} (${kb} kB)`)
@@ -64,20 +80,33 @@ export async function buildFrontend(projectDir: string): Promise<BuildResult> {
 
   if (!result.success) {
     for (const log of result.logs) console.error(`  Build error: ${log.message}`)
+    return { success: false, outputs, errors: result.logs.map((l) => l.message) }
   }
 
-  return { success: result.success, outputs, errors: result.logs.map((l) => l.message) }
+  // Run post-build command if configured
+  if (config.postBuild) {
+    const proc = Bun.spawnSync(['sh', '-c', config.postBuild], {
+      cwd: projectDir,
+      stdout: 'inherit',
+      stderr: 'inherit',
+    })
+    if (proc.exitCode !== 0) {
+      return { success: false, outputs, errors: [`Post-build command failed with exit code ${proc.exitCode}`] }
+    }
+  }
+
+  return { success: true, outputs, errors: [] }
 }
 
 export async function watchFrontend(projectDir: string, onRebuild?: () => void) {
+  const config = await loadConfig(projectDir)
   await buildFrontend(projectDir)
   console.log('[frontend] watching for changes...')
 
   const frontendDir = path.resolve(projectDir, 'frontend')
   let timeout: ReturnType<typeof setTimeout> | null = null
 
-  fs.watch(frontendDir, { recursive: true }, (_event, filename) => {
-    if (filename && (filename.startsWith('public/') || filename.includes('/public/'))) return
+  const scheduleRebuild = () => {
     if (timeout) clearTimeout(timeout)
     timeout = setTimeout(async () => {
       const start = performance.now()
@@ -86,7 +115,19 @@ export async function watchFrontend(projectDir: string, onRebuild?: () => void) 
       console.log(`[frontend] rebuilt in ${ms}ms`)
       if (result.success && onRebuild) onRebuild()
     }, 100)
+  }
+
+  fs.watch(frontendDir, { recursive: true }, (_event, filename) => {
+    if (filename && (filename.startsWith('public/') || filename.includes('/public/'))) return
+    scheduleRebuild()
   })
+
+  for (const dir of config.watchDirs ?? []) {
+    const watchDir = path.resolve(projectDir, dir)
+    if (fs.existsSync(watchDir)) {
+      fs.watch(watchDir, { recursive: true }, () => scheduleRebuild())
+    }
+  }
 }
 
 export function createStaticHandler(distDir: string, options: { spaFallback: boolean }) {
