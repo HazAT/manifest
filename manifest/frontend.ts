@@ -96,6 +96,9 @@ export function createStaticHandler(distDir: string, options: { spaFallback: boo
     // Never serve hidden files
     if (pathname.split('/').some((s) => s.startsWith('.'))) return null
 
+    // Never serve API routes — let the API handler deal with them
+    if (pathname.startsWith('/api/')) return null
+
     const filePath = path.resolve(resolvedDistDir, pathname.slice(1))
 
     // Path traversal guard: ensure resolved path stays within distDir
@@ -112,8 +115,6 @@ export function createStaticHandler(distDir: string, options: { spaFallback: boo
     if (fs.existsSync(indexFilePath) && fs.statSync(indexFilePath).isFile()) {
       return new Response(Bun.file(indexFilePath), { headers: { 'Cache-Control': 'no-cache' } })
     }
-
-    if (pathname.startsWith('/api/')) return null
 
     if (options.spaFallback) {
       const indexPath = path.join(distDir, 'index.html')
