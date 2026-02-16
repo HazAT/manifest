@@ -63,20 +63,20 @@ input.displayName without a null check in the OAuth branch.
 
 **Example — framework update from upstream:**
 ```
-chore: update from upstream manifest (upstream@abc1234..def5678)
+chore: cherry-pick framework updates from manifest branch
 
-Applied:
-- manifest/validator.ts: new UUID format validation
-- manifest/cli/makeFeature.ts: --type flag for stream/event features
+Cherry-picked from manifest branch (manifest-sync-2026-02-15..HEAD):
+
+Picked:
+- abc1234 feat(router): add wildcard route matching
+- def5678 fix(validator): handle nested object validation
 
 Skipped:
-- Upstream changed default port to 3000. We use 8080 and have
-  it configured in config/manifest.ts. Intentionally kept ours.
+- ghi9012 feat(extensions): add blog extension (not relevant to this project)
 
 Adapted:
-- manifest/router.ts: upstream added wildcard routes. Adapted the
-  implementation to coexist with our prefix-based tenant routing
-  (see services/tenantRouter.ts).
+- abc1234 (router): upstream added wildcard routes. Adapted to coexist
+  with our prefix-based tenant routing (services/tenantRouter.ts).
 
 All tests pass. tsc clean. manifest check clean.
 ```
@@ -96,7 +96,7 @@ All tests pass. tsc clean. manifest check clean.
 In most projects, commit messages are an afterthought. In Manifest, they're infrastructure. The commit history is:
 
 - **How agents orient.** An agent reads `git log` to understand what happened recently, what's been fixed, what's been changed. Vague messages like "fix stuff" or "update" are dead ends.
-- **How upstream updates work.** When someone runs the manifest-update skill, they read every commit message to decide what to apply, skip, or adapt. Your commit message is their migration guide.
+- **How upstream updates work.** When someone runs the manifest-update skill, the agent reads upstream commits, batches them, and recommends what to cherry-pick. Your commit messages are what the agent reads to understand each change.
 - **How debugging works.** When something breaks, `git log --oneline -- features/UserRegistration.ts` shows exactly what changed and why. Good messages make `git bisect` unnecessary.
 
 A commit message in Manifest is not a description of what you typed. It's a letter to the next agent explaining what you did and why.
