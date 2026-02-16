@@ -16,18 +16,24 @@ export async function scanFeatures(featuresDir: string): Promise<FeatureRegistry
 
   const tsFiles = files.filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'))
 
-  for (const file of tsFiles) {
+  const imports = tsFiles.map(async (file) => {
     const fullPath = path.resolve(featuresDir, file)
     try {
       const mod = await import(fullPath)
       const feature = mod.default as AnyFeatureDef | undefined
       if (feature && typeof feature === 'object' && feature.name) {
         ;(feature as any)._sourcePath = path.relative(process.cwd(), fullPath)
-        registry[feature.name] = feature
+        return [feature.name, feature] as const
       }
     } catch (err) {
       console.error(`[manifest] Failed to load feature from ${file}:`, err)
     }
+    return null
+  })
+
+  const results = await Promise.all(imports)
+  for (const result of results) {
+    if (result) registry[result[0]] = result[1]
   }
 
   return registry
@@ -46,14 +52,15 @@ export async function scanAllFeatures(projectDir: string): Promise<FeatureRegist
       entries = []
     }
 
-    for (const entry of entries) {
-      const entryPath = path.join(extensionsDir, entry)
-      if (!statSync(entryPath).isDirectory()) continue
+    // Parallelize extension directory scanning
+    const extDirs = entries
+      .map((entry) => ({ entry, entryPath: path.join(extensionsDir, entry) }))
+      .filter(({ entryPath }) => statSync(entryPath).isDirectory())
+      .map(({ entryPath }) => path.join(entryPath, 'features'))
+      .filter((extFeaturesDir) => existsSync(extFeaturesDir))
 
-      const extFeaturesDir = path.join(entryPath, 'features')
-      if (!existsSync(extFeaturesDir)) continue
-
-      const extRegistry = await scanFeatures(extFeaturesDir)
+    const extRegistries = await Promise.all(extDirs.map((dir) => scanFeatures(dir)))
+    for (const extRegistry of extRegistries) {
       Object.assign(registry, extRegistry)
     }
   }
