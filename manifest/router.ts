@@ -7,14 +7,13 @@ interface RouteEntry {
   feature: AnyFeatureDef
 }
 
-export interface RouteMatch {
-  feature: AnyFeatureDef
-  params: Record<string, string>
-}
+export type MatchResult =
+  | { kind: 'matched'; feature: AnyFeatureDef; params: Record<string, string> }
+  | { kind: 'method_not_allowed' }
+  | { kind: 'not_found' }
 
 export interface Router {
-  match(method: string, path: string): RouteMatch | null
-  isMethodNotAllowed(method: string, path: string): boolean
+  match(method: string, path: string): MatchResult
 }
 
 function splitPath(path: string): string[] {
@@ -54,23 +53,21 @@ export function createRouter(registry: Record<string, AnyFeatureDef>): Router {
   }
 
   return {
-    match(method: string, path: string): RouteMatch | null {
+    match(method: string, path: string): MatchResult {
       const pathSegments = splitPath(path)
-      for (const entry of entries) {
-        if (entry.method !== method) continue
-        const params = tryMatch(entry, pathSegments)
-        if (params) return { feature: entry.feature, params }
-      }
-      return null
-    },
+      let pathMatched = false
 
-    isMethodNotAllowed(method: string, path: string): boolean {
-      const pathSegments = splitPath(path)
       for (const entry of entries) {
         const params = tryMatch(entry, pathSegments)
-        if (params && entry.method !== method) return true
+        if (params) {
+          if (entry.method === method) {
+            return { kind: 'matched', feature: entry.feature, params }
+          }
+          pathMatched = true
+        }
       }
-      return false
+
+      return pathMatched ? { kind: 'method_not_allowed' } : { kind: 'not_found' }
     },
   }
 }

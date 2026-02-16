@@ -96,14 +96,14 @@ export async function createManifestServer(options: ManifestServerOptions) {
         })
       }
 
-      // Try to match route
+      // Try to match route (single pass handles match, 405, and 404)
       const match = router.match(method, pathname)
 
-      if (!match) {
-        if (router.isMethodNotAllowed(method, pathname)) {
-          return Response.json({ status: 405, message: 'Method not allowed' }, { status: 405 })
-        }
+      if (match.kind === 'method_not_allowed') {
+        return Response.json({ status: 405, message: 'Method not allowed' }, { status: 405 })
+      }
 
+      if (match.kind === 'not_found') {
         // Fallback to static files
         if (staticHandler) {
           const staticResponse = staticHandler(pathname)

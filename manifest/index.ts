@@ -16,7 +16,7 @@ export type { FieldDef, InputSchemaDef, StringFieldDef, IntegerFieldDef, NumberF
 export { validateInput } from './validator'
 
 export { createRouter } from './router'
-export type { Router, RouteMatch } from './router'
+export type { Router, MatchResult } from './router'
 
 export { scanFeatures, scanAllFeatures } from './scanner'
 export type { FeatureRegistry } from './scanner'

@@ -40,46 +40,42 @@ describe('createRouter', () => {
 
   test('matches exact routes', () => {
     const match = router.match('GET', '/api/hello')
-    expect(match).not.toBeNull()
-    expect(match!.feature.name).toBe('hello-world')
-    expect(match!.params).toEqual({})
+    expect(match.kind).toBe('matched')
+    if (match.kind === 'matched') {
+      expect(match.feature.name).toBe('hello-world')
+      expect(match.params).toEqual({})
+    }
   })
 
   test('matches routes with correct method', () => {
     const match = router.match('POST', '/api/users')
-    expect(match).not.toBeNull()
-    expect(match!.feature.name).toBe('create-user')
+    expect(match.kind).toBe('matched')
+    if (match.kind === 'matched') {
+      expect(match.feature.name).toBe('create-user')
+    }
   })
 
-  test('returns null for wrong method', () => {
+  test('returns method_not_allowed for wrong method', () => {
     const match = router.match('DELETE', '/api/hello')
-    expect(match).toBeNull()
+    expect(match.kind).toBe('method_not_allowed')
   })
 
-  test('returns null for unknown path', () => {
+  test('returns not_found for unknown path', () => {
     const match = router.match('GET', '/api/unknown')
-    expect(match).toBeNull()
+    expect(match.kind).toBe('not_found')
   })
 
   test('matches path parameters', () => {
     const match = router.match('GET', '/api/users/abc-123')
-    expect(match).not.toBeNull()
-    expect(match!.feature.name).toBe('get-user')
-    expect(match!.params).toEqual({ id: 'abc-123' })
+    expect(match.kind).toBe('matched')
+    if (match.kind === 'matched') {
+      expect(match.feature.name).toBe('get-user')
+      expect(match.params).toEqual({ id: 'abc-123' })
+    }
   })
 
   test('skips event-type features (no route)', () => {
     const match = router.match('GET', '/order-webhook')
-    expect(match).toBeNull()
-  })
-
-  test('isMethodNotAllowed detects wrong method', () => {
-    const result = router.isMethodNotAllowed('DELETE', '/api/hello')
-    expect(result).toBe(true)
-  })
-
-  test('isMethodNotAllowed returns false for unknown paths', () => {
-    const result = router.isMethodNotAllowed('GET', '/api/unknown')
-    expect(result).toBe(false)
+    expect(match.kind).toBe('not_found')
   })
 })
