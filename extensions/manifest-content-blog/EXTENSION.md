@@ -48,6 +48,8 @@ This is your file now. Edit it to change site title, social links, about text, a
 cp extensions/manifest-content-blog/templates/styles.css frontend/styles.css
 ```
 
+This template includes `@source "../dist"` — a Tailwind v4 directive that tells the CLI to scan the `dist/` directory for utility classes. Without it, Tailwind only scans relative to the CSS file (`frontend/`) and **will not find any classes** in the generated HTML, producing an empty or near-empty CSS output.
+
 ### 5. Install dependencies
 
 ```bash
@@ -302,7 +304,20 @@ The three build steps must run in order. If you run them separately, make sure:
 2. `bun run scripts/build-blog.ts` runs second
 3. `bunx @tailwindcss/cli ...` runs last
 
-If CSS is empty or missing `prose` styles, Tailwind CLI ran before the blog script generated the HTML. Run the full `bun run build` pipeline.
+If CSS is empty or missing `prose` styles, first check the `@source` directive (see below), then check build order. Run the full `bun run build` pipeline.
+
+### Tailwind classes not applied — site unstyled or layout broken
+
+This is the most common issue. Tailwind v4 scans for utility classes **relative to the CSS file's location**. Since `styles.css` is in `frontend/`, Tailwind only scans `frontend/` by default — but the generated HTML lives in `dist/`.
+
+1. Open `frontend/styles.css` and check for `@source "../dist";` near the top (after `@import "tailwindcss"`).
+2. If it's missing, add it:
+   ```css
+   @import "tailwindcss";
+   @source "../dist";
+   ```
+3. Rebuild with `bun run build`.
+4. Verify the CSS output has real utility classes: `grep -c 'background-color\|max-width\|flex' dist/index.css` — should return a number greater than 10. If it returns 0–2, Tailwind still isn't scanning the right directory.
 
 ### Tailwind CLI not found
 

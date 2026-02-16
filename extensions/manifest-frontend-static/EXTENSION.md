@@ -184,6 +184,19 @@ Add Tailwind classes in your HTML or TypeScript template literals:
 </div>
 ```
 
+### `@source` directive — when you use Tailwind CLI separately
+
+Bun's bundler processes Tailwind CSS inline and scans the whole project for classes. But if you use Tailwind CLI as a separate step (e.g., the blog extension uses it for the `@tailwindcss/typography` plugin), Tailwind v4 only scans for classes **relative to the CSS file's location** (`frontend/`).
+
+If your generated HTML lives elsewhere (e.g., `dist/`), add a `@source` directive to `styles.css`:
+
+```css
+@import "tailwindcss";
+@source "../dist";
+```
+
+Without this, Tailwind CLI won't find utility classes in generated HTML and will produce minimal or empty CSS output.
+
 ---
 
 ## How Source Maps Work

@@ -302,3 +302,20 @@ generatePosts(posts);
 generateAbout();
 
 console.log(`✓ Blog built: ${posts.length} post${posts.length === 1 ? "" : "s"} → ${OUTPUT_DIR}/`);
+
+// ---------------------------------------------------------------------------
+// Verify Tailwind @source directive
+// ---------------------------------------------------------------------------
+
+const stylesPath = "frontend/styles.css";
+if (existsSync(stylesPath)) {
+  const stylesContent = readFileSync(stylesPath, "utf-8");
+  if (!stylesContent.includes("@source")) {
+    console.warn("");
+    console.warn(`⚠ frontend/styles.css is missing @source "../dist";`);
+    console.warn(`  Tailwind v4 scans for classes relative to the CSS file (frontend/).`);
+    console.warn(`  Without @source, it won't find classes in the generated HTML in dist/.`);
+    console.warn(`  Add this line after @import "tailwindcss":`);
+    console.warn(`    @source "../dist";`);
+  }
+}
