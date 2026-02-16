@@ -337,80 +337,12 @@
 
   #stop-btn:hover { background: #dc2626; }
 
-  /* Auth screen */
-  #auth-screen {
-    display: none;
-    flex: 1;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  #auth-screen.visible { display: flex; }
-
-  #auth-screen h2 {
-    font-family: var(--font-sans);
-    color: var(--accent);
-    font-size: 20px;
-    font-weight: 700;
-  }
-
-  #auth-screen form {
-    display: flex;
-    gap: 8px;
-  }
-
-  #auth-screen input {
-    background: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    font-size: 13px;
-    padding: 8px 12px;
-    outline: none;
-    width: 260px;
-  }
-
-  #auth-screen input:focus { border-color: var(--accent-dim); }
-
-  #auth-screen button {
-    padding: 8px 16px;
-    background: var(--accent);
-    color: #000;
-    border: none;
-    border-radius: var(--radius);
-    font-family: var(--font-sans);
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-  }
-
-  #auth-screen button:hover { background: #fbbf24; }
-
-  #auth-error {
-    color: var(--red);
-    font-size: 12px;
-    display: none;
-  }
-
   #main-ui { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
-  #main-ui.hidden { display: none; }
 </style>
 </head>
 <body>
 
-<div id="auth-screen">
-  <h2>⚡ Spark</h2>
-  <form id="auth-form">
-    <input type="password" id="token-input" placeholder="Enter access token" autocomplete="off">
-    <button type="submit">Connect</button>
-  </form>
-  <div id="auth-error">Authentication failed. Check your token.</div>
-</div>
-
-<div id="main-ui" class="hidden">
+<div id="main-ui">
   <div id="header">
     <div class="logo">⚡ Spark</div>
     <span id="env-badge" class="badge badge-env"></span>
@@ -421,6 +353,7 @@
     </div>
     <div class="spacer"></div>
     <div class="status-dot disconnected" id="status-dot" title="Disconnected"></div>
+    <form method="POST" action="/logout" style="margin:0"><button type="submit" style="background:none;border:1px solid var(--border);color:var(--text-muted);font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:var(--radius);cursor:pointer;">logout</button></form>
   </div>
 
   <div id="messages"></div>
@@ -435,7 +368,6 @@
 <script>
 (function() {
   // --- State ---
-  let token = null;
   let ws = null;
   let reconnectDelay = 2000;
   let reconnectTimer = null;
@@ -445,10 +377,6 @@
   let userScrolledUp = false;
 
   // DOM refs
-  const authScreen = document.getElementById('auth-screen');
-  const authForm = document.getElementById('auth-form');
-  const tokenInput = document.getElementById('token-input');
-  const authError = document.getElementById('auth-error');
   const mainUI = document.getElementById('main-ui');
   const messagesEl = document.getElementById('messages');
   const msgInput = document.getElementById('msg-input');
@@ -465,39 +393,8 @@
   let currentToolCalls = {};  // toolCallId -> { el, resultEl, name }
   let streamingToolCall = null; // { id, name, argsBuffer }
 
-  // --- Auth ---
-  const params = new URLSearchParams(window.location.search);
-  const urlToken = params.get('token');
-  if (urlToken) {
-    token = urlToken;
-    history.replaceState(null, '', window.location.pathname);
-    showMain();
-    connect();
-  } else {
-    authScreen.classList.add('visible');
-  }
-
-  authForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const val = tokenInput.value.trim();
-    if (!val) return;
-    token = val;
-    authError.style.display = 'none';
-    showMain();
-    connect();
-  });
-
-  function showMain() {
-    authScreen.classList.remove('visible');
-    mainUI.classList.remove('hidden');
-  }
-
-  function showAuth(error) {
-    mainUI.classList.add('hidden');
-    authScreen.classList.add('visible');
-    if (error) authError.style.display = 'block';
-    token = null;
-  }
+  // --- Connect immediately (auth is cookie-based, server only serves this page when authenticated) ---
+  connect();
 
   // --- WebSocket ---
   function connect() {
@@ -505,7 +402,7 @@
     setConnectionStatus('connecting');
 
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = proto + '//' + location.host + '/ws?token=' + encodeURIComponent(token);
+    const wsUrl = proto + '//' + location.host + '/ws';
     ws = new WebSocket(wsUrl);
 
     ws.onopen = function() {
@@ -532,13 +429,11 @@
         // Could be auth or server down - try reconnect first
       }
 
-      if (token) {
-        clearTimeout(reconnectTimer);
-        reconnectTimer = setTimeout(function() {
-          reconnectDelay = Math.min(reconnectDelay * 2, 30000);
-          connect();
-        }, reconnectDelay);
-      }
+      clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(function() {
+        reconnectDelay = Math.min(reconnectDelay * 2, 30000);
+        connect();
+      }, reconnectDelay);
     };
 
     ws.onerror = function() {};

@@ -23,6 +23,74 @@ function safeTokenCompare(a: string, b: string): boolean {
   return crypto.timingSafeEqual(Buffer.from(a), Buffer.from(b))
 }
 
+/** Parse cookies from a request into a key-value map. */
+function parseCookies(req: Request): Record<string, string> {
+  const header = req.headers.get('cookie') || ''
+  const cookies: Record<string, string> = {}
+  for (const pair of header.split(';')) {
+    const [key, ...rest] = pair.split('=')
+    if (key) cookies[key.trim()] = rest.join('=').trim()
+  }
+  return cookies
+}
+
+/** Check if request hostname is localhost. */
+function isLocalhost(req: Request): boolean {
+  const url = new URL(req.url)
+  return url.hostname === 'localhost' || url.hostname === '127.0.0.1' || url.hostname === '::1'
+}
+
+/** In-memory rate limiter for auth endpoint. */
+const authAttempts = new Map<string, number[]>()
+const AUTH_RATE_LIMIT = 5
+const AUTH_RATE_WINDOW = 60_000 // 60 seconds in ms
+
+function checkAuthRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now()
+  const timestamps = (authAttempts.get(ip) || []).filter(t => now - t < AUTH_RATE_WINDOW)
+  authAttempts.set(ip, timestamps)
+  if (timestamps.length >= AUTH_RATE_LIMIT) {
+    const oldest = timestamps[0]
+    const retryAfter = Math.ceil((oldest + AUTH_RATE_WINDOW - now) / 1000)
+    return { allowed: false, retryAfter }
+  }
+  timestamps.push(now)
+  return { allowed: true }
+}
+
+/** Login page HTML. */
+const loginPageHtml = (error?: string) => `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spark — Login</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0a; color: #e0e0e0; font-family: monospace; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .container { width: 100%; max-width: 360px; padding: 2rem; }
+    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; color: #00ff88; }
+    .error { background: #331111; border: 1px solid #ff4444; color: #ff6666; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.85rem; }
+    label { display: block; font-size: 0.85rem; margin-bottom: 0.25rem; color: #888; }
+    input { width: 100%; padding: 0.6rem; background: #1a1a1a; border: 1px solid #333; color: #e0e0e0; font-family: monospace; font-size: 0.9rem; margin-bottom: 1rem; }
+    input:focus { outline: none; border-color: #00ff88; }
+    button { width: 100%; padding: 0.6rem; background: #00ff88; color: #0a0a0a; border: none; font-family: monospace; font-size: 0.9rem; font-weight: bold; cursor: pointer; }
+    button:hover { background: #00cc6a; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>⚡ Spark</h1>
+    ${error ? `<div class="error">${error}</div>` : ''}
+    <form method="POST" action="/auth">
+      <label for="token">Token</label>
+      <input type="password" id="token" name="token" required autofocus>
+      <button type="submit">Authenticate</button>
+    </form>
+  </div>
+</body>
+</html>`
+
 /**
  * Starts the Spark Web sidecar: a standalone Bun.serve() that hosts the
  * dashboard HTML, WebSocket bridge, and an in-process Pi AgentSession
@@ -36,6 +104,9 @@ export async function startSparkSidecar(config: SparkSidecarConfig): Promise<voi
   // Cache the HTML file in memory
   const htmlPath = path.resolve(__dirname, '../frontend/index.html')
   const cachedHtml = fs.readFileSync(htmlPath, 'utf-8')
+
+  // Session store for cookie-based auth
+  const sessions = new Set<string>()
 
   // Connected WebSocket clients
   const clients = new Set<WebSocketClient>()
@@ -160,25 +231,83 @@ export async function startSparkSidecar(config: SparkSidecarConfig): Promise<voi
       fetch(req, server) {
         const url = new URL(req.url)
         const pathname = url.pathname
+        const cookies = parseCookies(req)
+        const sessionId = cookies['spark_session']
+        const hasValidSession = !!sessionId && sessions.has(sessionId)
 
-        // Dashboard HTML at root
+        const buildCookie = (value: string, maxAge?: number) => {
+          let cookie = `spark_session=${value}; HttpOnly; SameSite=Strict; Path=/`
+          if (!isLocalhost(req)) cookie += '; Secure'
+          if (maxAge !== undefined) cookie += `; Max-Age=${maxAge}`
+          return cookie
+        }
+
+        // Dashboard or login at root
         if (pathname === '/' || pathname === '') {
-          const reqToken = url.searchParams.get('token')
-          if (!reqToken || !safeTokenCompare(reqToken, token)) {
-            return new Response('Unauthorized', { status: 401 })
+          if (hasValidSession) {
+            return new Response(cachedHtml, {
+              headers: { 'Content-Type': 'text/html; charset=utf-8' },
+            })
           }
-          return new Response(cachedHtml, {
+          return new Response(loginPageHtml(), {
             headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          })
+        }
+
+        // Login endpoint
+        if (pathname === '/auth' && req.method === 'POST') {
+          const ip = server.requestIP(req)?.address || 'unknown'
+          const rateCheck = checkAuthRateLimit(ip)
+          if (!rateCheck.allowed) {
+            return new Response(loginPageHtml('Too many attempts. Please wait and try again.'), {
+              status: 429,
+              headers: {
+                'Content-Type': 'text/html; charset=utf-8',
+                'Retry-After': String(rateCheck.retryAfter),
+              },
+            })
+          }
+
+          // Parse form body
+          return (async () => {
+            const formData = await req.formData()
+            const submittedToken = formData.get('token')
+            if (typeof submittedToken !== 'string' || !safeTokenCompare(submittedToken, token)) {
+              return new Response(loginPageHtml('Invalid token.'), {
+                status: 401,
+                headers: { 'Content-Type': 'text/html; charset=utf-8' },
+              })
+            }
+            const newSession = crypto.randomUUID()
+            sessions.add(newSession)
+            return new Response(null, {
+              status: 302,
+              headers: {
+                'Location': '/',
+                'Set-Cookie': buildCookie(newSession),
+              },
+            })
+          })()
+        }
+
+        // Logout endpoint
+        if (pathname === '/logout' && req.method === 'POST') {
+          if (sessionId) sessions.delete(sessionId)
+          return new Response(null, {
+            status: 302,
+            headers: {
+              'Location': '/',
+              'Set-Cookie': buildCookie('', 0),
+            },
           })
         }
 
         // WebSocket upgrade
         if (pathname === '/ws') {
-          const reqToken = url.searchParams.get('token')
-          if (!reqToken || !safeTokenCompare(reqToken, token)) {
+          if (!hasValidSession) {
             return new Response('Unauthorized', { status: 401 })
           }
-          const upgraded = server.upgrade(req, { data: { token: reqToken } } as any)
+          const upgraded = server.upgrade(req, { data: {} } as any)
           if (upgraded) return undefined as any
           return new Response('WebSocket upgrade failed', { status: 500 })
         }
