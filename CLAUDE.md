@@ -42,6 +42,33 @@ Manifest has opinions about how features, schemas, and services are structured �
 
 That's fine. When you add things, just try to keep them explicit and self-explanatory. If you bring in a new library, make it clear what it does and why it's there. If you add a pattern, make sure someone reading the code for the first time can follow it without tribal knowledge. The principles above are a compass, not a cage.
 
+## Branch Model
+
+Manifest uses a two-branch model that separates the framework from your application:
+
+```
+manifest-upstream (GitHub remote)
+  │
+  │  git fetch manifest-upstream
+  ▼
+manifest (local branch — framework reference, read-only)
+  │
+  │  interactive cherry-pick (agent-guided)
+  ▼
+main (local branch — YOUR application)
+  │
+  │  git checkout -b feat/...
+  ▼
+feat/* / fix/* (feature branches for development work)
+```
+
+- **`manifest-upstream`** remote → points to the Manifest GitHub repo
+- **`manifest`** branch → local copy of upstream, updated via fetch + fast-forward merge. Never commit app code here. Never force-push.
+- **`main`** branch → your application. This is yours — develop here.
+- **`feat/*`**, **`fix/*`** branches → feature work, branched off `main` as usual.
+
+To update the framework from upstream, load the `manifest-update` skill. To contribute improvements back, load the `manifest-contribute` skill.
+
 ## Project Structure
 
 ```
@@ -419,13 +446,26 @@ Extensions live in `extensions/` and follow the same conventions. Each has an `E
 
 ## Updating from Upstream
 
-When the base Manifest repo adds new capabilities, don't blindly merge. Load the update skill:
+When the upstream Manifest repo adds new capabilities, you cherry-pick what you want:
+
+1. **Fetch** — Pull upstream changes into your local `manifest` branch
+2. **Review** — The agent reads new commits and groups them by area (framework, CLI, skills, docs)
+3. **Recommend** — The agent suggests which batches to pick or skip, with reasoning
+4. **Cherry-pick** — Selected commits are applied to `main`, with conflict resolution
+
+This is deliberate — you control what enters your application. Load the skill for the full flow:
 
 ```
 Read and follow .claude/skills/manifest-update/SKILL.md
 ```
 
-The skill walks you through reading upstream commits, understanding what changed, and applying updates intelligently — adapting to what your project has become rather than creating merge conflicts.
+## Contributing Back
+
+If you improve framework code in `manifest/`, CLI commands, or skills, you can contribute those changes back to the upstream repo. The agent identifies framework-related commits on `main`, cherry-picks them onto a contribution branch off `manifest`, and opens a PR.
+
+```
+Read and follow .claude/skills/manifest-contribute/SKILL.md
+```
 
 ## Spark — The Sidekick
 
