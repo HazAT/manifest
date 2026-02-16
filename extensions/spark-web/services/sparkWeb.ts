@@ -65,27 +65,91 @@ const loginPageHtml = (error?: string) => `<!DOCTYPE html>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Spark — Login</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #0a0a0a; color: #e0e0e0; font-family: monospace; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-    .container { width: 100%; max-width: 360px; padding: 2rem; }
-    h1 { font-size: 1.5rem; margin-bottom: 1.5rem; color: #00ff88; }
-    .error { background: #331111; border: 1px solid #ff4444; color: #ff6666; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.85rem; }
-    label { display: block; font-size: 0.85rem; margin-bottom: 0.25rem; color: #888; }
-    input { width: 100%; padding: 0.6rem; background: #1a1a1a; border: 1px solid #333; color: #e0e0e0; font-family: monospace; font-size: 0.9rem; margin-bottom: 1rem; }
-    input:focus { outline: none; border-color: #00ff88; }
-    button { width: 100%; padding: 0.6rem; background: #00ff88; color: #0a0a0a; border: none; font-family: monospace; font-size: 0.9rem; font-weight: bold; cursor: pointer; }
-    button:hover { background: #00cc6a; }
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'JetBrains Mono', ui-monospace, monospace; }
+    ::selection { background: #00ff41; color: #000; }
+    body { background: #000; color: #b0b0b0; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0; }
+    }
+    @keyframes spark-shimmer {
+      0%, 100% { text-shadow: 0 0 4px rgba(255, 176, 0, 0.4), 0 0 11px rgba(255, 176, 0, 0.2), 0 0 30px rgba(255, 140, 0, 0.1); }
+      50% { text-shadow: 0 0 6px rgba(255, 176, 0, 0.8), 0 0 20px rgba(255, 176, 0, 0.4), 0 0 45px rgba(255, 140, 0, 0.2), 0 0 80px rgba(255, 100, 0, 0.1); }
+    }
+    @keyframes ember-rise-1 {
+      0% { opacity: 0; transform: translate(0, 0) scale(1); }
+      20% { opacity: 1; }
+      100% { opacity: 0; transform: translate(8px, -30px) scale(0); }
+    }
+    @keyframes ember-rise-2 {
+      0% { opacity: 0; transform: translate(0, 0) scale(1); }
+      25% { opacity: 0.8; }
+      100% { opacity: 0; transform: translate(-6px, -25px) scale(0); }
+    }
+    .container { width: 100%; max-width: 380px; padding: 2rem; }
+    .title { font-size: 1.5rem; margin-bottom: 2rem; display: flex; align-items: center; gap: 0.5rem; }
+    .spark-word {
+      color: #ffb000;
+      font-weight: 700;
+      animation: spark-shimmer 3s ease-in-out infinite;
+      position: relative;
+      display: inline-block;
+    }
+    .spark-word::before, .spark-word::after {
+      content: '';
+      position: absolute;
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: #ffb000;
+      opacity: 0;
+    }
+    .spark-word::before { right: 8px; top: 6px; animation: ember-rise-1 4s ease-out 1s infinite; }
+    .spark-word::after { right: 2px; top: 10px; animation: ember-rise-2 4s ease-out 2.5s infinite; }
+    .prompt-line { color: #555; font-size: 0.85rem; margin-bottom: 1.5rem; }
+    .prompt-line .cmd { color: #e0e0e0; }
+    .cursor::after {
+      content: '';
+      display: inline-block;
+      width: 0.55em;
+      height: 1em;
+      background: #00ff41;
+      vertical-align: -0.15em;
+      margin-left: 1px;
+      animation: blink 1s step-end infinite;
+    }
+    .error-msg { background: #1a0a0a; border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; padding: 0.75rem; margin-bottom: 1rem; font-size: 0.8rem; border-radius: 4px; }
+    .error-msg::before { content: 'ERR '; color: #555; }
+    label { display: block; font-size: 0.8rem; margin-bottom: 0.35rem; color: #555; }
+    input {
+      width: 100%; padding: 0.6rem; background: #0a0a0a; border: 1px solid #1a1a1a; border-radius: 4px;
+      color: #e0e0e0; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.85rem; margin-bottom: 1.25rem;
+      transition: border-color 0.3s;
+    }
+    input:focus { outline: none; border-color: #00ff41; }
+    button {
+      width: 100%; padding: 0.6rem; background: #00ff41; color: #000; border: none; border-radius: 4px;
+      font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover { background: #00cc33; }
+    .divider { height: 1px; background: linear-gradient(90deg, transparent, #1a1a1a 20%, #1a1a1a 80%, transparent); margin: 1.5rem 0; }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>⚡ Spark</h1>
-    ${error ? `<div class="error">${error}</div>` : ''}
+    <div class="title">⚡ <span class="spark-word">Spark</span></div>
+    <div class="prompt-line"><span class="cmd">$ authenticate</span><span class="cursor"></span></div>
+    <div class="divider"></div>
+    ${error ? '<div class="error-msg">' + error + '</div>' : ''}
     <form method="POST" action="/auth">
-      <label for="token">Token</label>
-      <input type="password" id="token" name="token" required autofocus>
-      <button type="submit">Authenticate</button>
+      <label for="token">token</label>
+      <input type="password" id="token" name="token" required autofocus placeholder="enter access token">
+      <button type="submit">authenticate →</button>
     </form>
   </div>
 </body>

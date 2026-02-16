@@ -4,36 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>⚡ Spark</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg-primary: #1a1a2e;
-    --bg-secondary: #16213e;
-    --bg-tertiary: #0f3460;
-    --bg-input: #1e1e3a;
-    --bg-user-msg: #2a2a4a;
-    --bg-tool: #1a1a30;
-    --bg-error: #2d1a1a;
-    --text-primary: #e0e0e0;
-    --text-secondary: #8888a8;
-    --text-muted: #5a5a7a;
-    --accent: #f59e0b;
-    --accent-dim: #b45309;
-    --accent-glow: rgba(245, 158, 11, 0.15);
-    --border: #2a2a4a;
-    --red: #ef4444;
-    --green: #22c55e;
-    --blue: #3b82f6;
-    --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', Consolas, monospace;
-    --font-sans: system-ui, -apple-system, sans-serif;
-    --radius: 6px;
-  }
+  * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'JetBrains Mono', ui-monospace, monospace; }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
+  ::selection { background: #00ff41; color: #000; }
 
   body {
-    font-family: var(--font-mono);
-    background: var(--bg-primary);
-    color: var(--text-primary);
+    background: #000;
+    color: #b0b0b0;
     height: 100vh;
     display: flex;
     flex-direction: column;
@@ -42,23 +23,98 @@
     line-height: 1.5;
   }
 
+  /* Glow effects */
+  .glow {
+    position: relative;
+    display: inline-block;
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.3), 0 0 40px rgba(0, 255, 65, 0.1);
+  }
+  .glow::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.08) 2px, rgba(0, 0, 0, 0.08) 4px);
+  }
+
+  .glow-amber {
+    position: relative;
+    display: inline-block;
+    text-shadow: 0 0 10px rgba(255, 176, 0, 0.3), 0 0 40px rgba(255, 176, 0, 0.1);
+  }
+  .glow-amber::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0, 0, 0, 0.08) 2px, rgba(0, 0, 0, 0.08) 4px);
+  }
+
+  /* Spark shimmer */
+  @keyframes spark-shimmer {
+    0%, 100% {
+      text-shadow: 0 0 4px rgba(255, 176, 0, 0.4), 0 0 11px rgba(255, 176, 0, 0.2), 0 0 30px rgba(255, 140, 0, 0.1);
+    }
+    50% {
+      text-shadow: 0 0 6px rgba(255, 176, 0, 0.8), 0 0 20px rgba(255, 176, 0, 0.4), 0 0 45px rgba(255, 140, 0, 0.2), 0 0 80px rgba(255, 100, 0, 0.1);
+    }
+  }
+
+  .spark-word {
+    color: #ffb000;
+    animation: spark-shimmer 3s ease-in-out infinite;
+    position: relative;
+    display: inline-block;
+  }
+  .spark-word::before, .spark-word::after {
+    content: '';
+    position: absolute;
+    width: 3px;
+    height: 3px;
+    border-radius: 50%;
+    background: #ffb000;
+    opacity: 0;
+  }
+  @keyframes ember-rise-1 {
+    0% { opacity: 0; transform: translate(0, 0) scale(1); }
+    20% { opacity: 1; }
+    100% { opacity: 0; transform: translate(8px, -30px) scale(0); }
+  }
+  @keyframes ember-rise-2 {
+    0% { opacity: 0; transform: translate(0, 0) scale(1); }
+    25% { opacity: 0.8; }
+    100% { opacity: 0; transform: translate(-6px, -25px) scale(0); }
+  }
+  .spark-word::before { right: 8px; top: 6px; animation: ember-rise-1 4s ease-out 1s infinite; }
+  .spark-word::after { right: 2px; top: 10px; animation: ember-rise-2 4s ease-out 2.5s infinite; }
+
+  /* Blinking cursor */
+  @keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
   /* Header */
   #header {
     display: flex;
     align-items: center;
     gap: 12px;
     padding: 8px 16px;
-    background: var(--bg-secondary);
-    border-bottom: 1px solid var(--border);
+    background: #000;
+    border-bottom: 1px solid #1a1a1a;
     flex-shrink: 0;
     min-height: 40px;
   }
 
   #header .logo {
-    font-family: var(--font-sans);
     font-weight: 700;
     font-size: 15px;
-    color: var(--accent);
+    color: #ffb000;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -71,20 +127,19 @@
     border-radius: 10px;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    font-family: var(--font-sans);
     font-weight: 600;
   }
 
   .badge-env {
-    background: var(--bg-tertiary);
-    color: var(--blue);
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    background: #0a0a0a;
+    color: #00ff41;
+    border: 1px solid rgba(0, 255, 65, 0.2);
   }
 
   .badge-mode {
-    background: var(--bg-tertiary);
-    color: var(--accent);
-    border: 1px solid rgba(245, 158, 11, 0.3);
+    background: #0a0a0a;
+    color: #ffb000;
+    border: 1px solid rgba(255, 176, 0, 0.2);
   }
 
   .spacer { flex: 1; }
@@ -96,22 +151,16 @@
     flex-shrink: 0;
   }
 
-  .status-dot.connected { background: var(--green); }
-  .status-dot.disconnected { background: var(--red); }
-  .status-dot.connecting { background: var(--accent); animation: pulse 1.5s infinite; }
-
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.3; }
-  }
+  .status-dot.connected { background: #22c55e; }
+  .status-dot.disconnected { background: #ef4444; }
+  .status-dot.connecting { background: #ffb000; animation: pulse 1.5s infinite; }
 
   .streaming-indicator {
     display: none;
     align-items: center;
     gap: 4px;
     font-size: 11px;
-    color: var(--accent);
-    font-family: var(--font-sans);
+    color: #ffb000;
   }
 
   .streaming-indicator.active { display: flex; }
@@ -120,9 +169,22 @@
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--accent);
+    background: #ffb000;
     animation: pulse 1s infinite;
   }
+
+  .logout-btn {
+    background: none;
+    border: 1px solid #1a1a1a;
+    color: #555;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 0.3s, color 0.3s;
+  }
+  .logout-btn:hover { border-color: #333; color: #888; }
 
   /* Messages area */
   #messages {
@@ -132,16 +194,17 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    background: #000;
   }
 
   #messages::-webkit-scrollbar { width: 6px; }
   #messages::-webkit-scrollbar-track { background: transparent; }
-  #messages::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  #messages::-webkit-scrollbar-thumb { background: #1a1a1a; border-radius: 3px; }
 
   .msg { max-width: 100%; }
 
   .msg-system {
-    color: var(--text-muted);
+    color: #555;
     font-style: italic;
     font-size: 12px;
     text-align: center;
@@ -150,13 +213,14 @@
 
   .msg-user {
     align-self: flex-end;
-    background: var(--bg-user-msg);
+    background: #0a0a0a;
     padding: 8px 12px;
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
+    border-radius: 4px;
+    border: 1px solid #1a1a1a;
     max-width: 80%;
     white-space: pre-wrap;
     word-break: break-word;
+    color: #e0e0e0;
   }
 
   .msg-assistant {
@@ -164,21 +228,23 @@
     max-width: 90%;
     white-space: pre-wrap;
     word-break: break-word;
+    color: #b0b0b0;
   }
 
   .msg-assistant strong { color: #fff; }
 
   .msg-assistant code:not(pre code) {
-    background: var(--bg-tertiary);
+    background: #111;
     padding: 1px 5px;
     border-radius: 3px;
     font-size: 12px;
+    color: #e0e0e0;
   }
 
   .msg-assistant pre {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
+    background: #0a0a0a;
+    border: 1px solid #1a1a1a;
+    border-radius: 4px;
     padding: 10px;
     overflow-x: auto;
     margin: 6px 0;
@@ -189,54 +255,66 @@
   .msg-assistant pre code {
     background: none;
     padding: 0;
+    color: #b0b0b0;
   }
 
   .msg-assistant a {
-    color: var(--accent);
+    color: #ffb000;
     text-decoration: underline;
     cursor: pointer;
   }
 
   .msg-thinking {
-    color: var(--text-muted);
+    color: #555;
     font-style: italic;
     font-size: 12px;
-    border-left: 2px solid var(--border);
+    border-left: 2px solid #1a1a1a;
     padding-left: 8px;
     margin: 4px 0;
     max-width: 90%;
     white-space: pre-wrap;
     word-break: break-word;
+    transition: border-color 0.3s;
+  }
+  .msg-thinking:hover {
+    border-color: #00ff41;
+    background: rgba(0, 255, 65, 0.03);
   }
 
   .tool-call {
     margin: 4px 0;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: var(--bg-tool);
+    border: 1px solid #1a1a1a;
+    border-radius: 4px;
+    background: #0a0a0a;
     max-width: 90%;
   }
 
   .tool-call summary {
     padding: 6px 10px;
     font-size: 12px;
-    color: var(--text-secondary);
+    color: #555;
     cursor: pointer;
     user-select: none;
     display: flex;
     align-items: center;
     gap: 6px;
+    border-left: 2px solid #1a1a1a;
+    transition: border-color 0.3s, background 0.3s;
   }
 
-  .tool-call summary:hover { color: var(--text-primary); }
+  .tool-call summary:hover {
+    color: #b0b0b0;
+    border-color: #00ff41;
+    background: rgba(0, 255, 65, 0.03);
+  }
 
   .tool-call summary .tool-name {
-    color: var(--accent);
+    color: #ffb000;
     font-weight: 600;
   }
 
   .tool-call summary .tool-args {
-    color: var(--text-muted);
+    color: #555;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -245,28 +323,28 @@
 
   .tool-call .tool-result {
     padding: 8px 10px;
-    border-top: 1px solid var(--border);
+    border-top: 1px solid #1a1a1a;
     font-size: 12px;
     max-height: 300px;
     overflow: auto;
     white-space: pre-wrap;
     word-break: break-all;
-    color: var(--text-secondary);
+    color: #555;
   }
 
-  .tool-call .tool-result.error { color: var(--red); }
+  .tool-call .tool-result.error { color: #ef4444; }
 
   .error-card {
-    background: var(--bg-error);
+    background: #1a0a0a;
     border: 1px solid rgba(239, 68, 68, 0.3);
-    border-radius: var(--radius);
+    border-radius: 4px;
     padding: 10px 12px;
     margin: 4px 0;
     max-width: 90%;
   }
 
   .error-card .error-title {
-    color: var(--red);
+    color: #ef4444;
     font-weight: 600;
     font-size: 12px;
     margin-bottom: 4px;
@@ -274,7 +352,7 @@
 
   .error-card pre {
     font-size: 11px;
-    color: var(--text-secondary);
+    color: #555;
     white-space: pre-wrap;
     word-break: break-all;
   }
@@ -285,18 +363,18 @@
     align-items: flex-end;
     gap: 8px;
     padding: 10px 16px;
-    background: var(--bg-secondary);
-    border-top: 1px solid var(--border);
+    background: #000;
+    border-top: 1px solid #1a1a1a;
     flex-shrink: 0;
   }
 
   #input-bar textarea {
     flex: 1;
-    background: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    color: var(--text-primary);
-    font-family: var(--font-mono);
+    background: #0a0a0a;
+    border: 1px solid #1a1a1a;
+    border-radius: 4px;
+    color: #e0e0e0;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-size: 13px;
     padding: 8px 10px;
     resize: none;
@@ -304,16 +382,17 @@
     min-height: 36px;
     max-height: 144px;
     line-height: 1.4;
+    transition: border-color 0.3s;
   }
 
-  #input-bar textarea:focus { border-color: var(--accent-dim); }
-  #input-bar textarea::placeholder { color: var(--text-muted); }
+  #input-bar textarea:focus { border-color: #00ff41; }
+  #input-bar textarea::placeholder { color: #333; }
 
   #input-bar button {
     padding: 8px 14px;
     border: none;
-    border-radius: var(--radius);
-    font-family: var(--font-sans);
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
@@ -322,16 +401,16 @@
   }
 
   #send-btn {
-    background: var(--accent);
+    background: #00ff41;
     color: #000;
   }
 
-  #send-btn:hover { background: #fbbf24; }
+  #send-btn:hover { background: #00cc33; }
   #send-btn:disabled { opacity: 0.3; cursor: default; }
 
   #stop-btn {
     display: none;
-    background: var(--red);
+    background: #ef4444;
     color: #fff;
   }
 
@@ -344,7 +423,7 @@
 
 <div id="main-ui">
   <div id="header">
-    <div class="logo">⚡ Spark</div>
+    <div class="logo">⚡ <span class="spark-word">Spark</span></div>
     <span id="env-badge" class="badge badge-env"></span>
     <span id="mode-badge" class="badge badge-mode" style="display:none"></span>
     <div class="streaming-indicator" id="streaming-ind">
@@ -353,7 +432,7 @@
     </div>
     <div class="spacer"></div>
     <div class="status-dot disconnected" id="status-dot" title="Disconnected"></div>
-    <form method="POST" action="/logout" style="margin:0"><button type="submit" style="background:none;border:1px solid var(--border);color:var(--text-muted);font-family:var(--font-mono);font-size:11px;padding:2px 8px;border-radius:var(--radius);cursor:pointer;">logout</button></form>
+    <form method="POST" action="/logout" style="margin:0"><button type="submit" class="logout-btn">logout</button></form>
   </div>
 
   <div id="messages"></div>
@@ -367,7 +446,6 @@
 
 <script>
 (function() {
-  // --- State ---
   let ws = null;
   let reconnectDelay = 2000;
   let reconnectTimer = null;
@@ -376,7 +454,6 @@
   let sessionReady = false;
   let userScrolledUp = false;
 
-  // DOM refs
   const mainUI = document.getElementById('main-ui');
   const messagesEl = document.getElementById('messages');
   const msgInput = document.getElementById('msg-input');
@@ -387,16 +464,13 @@
   const modeBadge = document.getElementById('mode-badge');
   const streamingInd = document.getElementById('streaming-ind');
 
-  // Current streaming state
   let currentAssistantEl = null;
   let currentThinkingEl = null;
-  let currentToolCalls = {};  // toolCallId -> { el, resultEl, name }
-  let streamingToolCall = null; // { id, name, argsBuffer }
+  let currentToolCalls = {};
+  let streamingToolCall = null;
 
-  // --- Connect immediately (auth is cookie-based, server only serves this page when authenticated) ---
   connect();
 
-  // --- WebSocket ---
   function connect() {
     if (ws) { try { ws.close(); } catch {} }
     setConnectionStatus('connecting');
@@ -418,17 +492,11 @@
       handleEvent(data);
     };
 
-    ws.onclose = function(e) {
+    ws.onclose = function() {
       isConnected = false;
       sessionReady = false;
       setConnectionStatus('disconnected');
       updateInputState();
-
-      // Auth failure
-      if (e.code === 1008 || e.code === 4001 || e.code === 1006) {
-        // Could be auth or server down - try reconnect first
-      }
-
       clearTimeout(reconnectTimer);
       reconnectTimer = setTimeout(function() {
         reconnectDelay = Math.min(reconnectDelay * 2, 30000);
@@ -444,7 +512,6 @@
     statusDot.title = status.charAt(0).toUpperCase() + status.slice(1);
   }
 
-  // --- Event handling ---
   function handleEvent(data) {
     switch (data.type) {
       case 'state':
@@ -453,17 +520,13 @@
           envBadge.textContent = data.data.environment === 'development' ? 'dev' : 'prod';
         }
         if (data.data.isStreaming) setStreaming(true);
-        if (data.data.sessionError) {
-          appendSystem('Session error: ' + data.data.sessionError);
-        }
+        if (data.data.sessionError) appendSystem('Session error: ' + data.data.sessionError);
         updateInputState();
         break;
-
       case 'messages':
         messagesEl.innerHTML = '';
         renderHistory(data.messages || []);
         break;
-
       case 'message_start':
         if (data.message && data.message.role === 'assistant') {
           currentAssistantEl = null;
@@ -471,37 +534,29 @@
           streamingToolCall = null;
         }
         break;
-
       case 'message_update':
         handleMessageUpdate(data.event);
         break;
-
       case 'message_end':
         currentAssistantEl = null;
         currentThinkingEl = null;
         streamingToolCall = null;
         break;
-
       case 'tool_start':
         handleToolStart(data);
         break;
-
       case 'tool_update':
         handleToolUpdate(data);
         break;
-
       case 'tool_end':
         handleToolEnd(data);
         break;
-
       case 'agent_start':
         setStreaming(true);
         break;
-
       case 'agent_end':
         setStreaming(false);
         break;
-
       case 'error':
         appendError('Error', data.message);
         break;
@@ -510,7 +565,6 @@
 
   function handleMessageUpdate(event) {
     if (!event) return;
-
     if (event.type === 'text_delta') {
       if (!currentAssistantEl) {
         currentAssistantEl = document.createElement('div');
@@ -534,9 +588,7 @@
     } else if (event.type === 'toolcall_start') {
       streamingToolCall = { id: event.toolCallId || '', name: event.toolName || '', argsBuffer: '' };
     } else if (event.type === 'toolcall_delta') {
-      if (streamingToolCall) {
-        streamingToolCall.argsBuffer += (event.delta || '');
-      }
+      if (streamingToolCall) streamingToolCall.argsBuffer += (event.delta || '');
     } else if (event.type === 'toolcall_end') {
       if (streamingToolCall) {
         createToolCallEl(streamingToolCall.id || event.toolCallId, streamingToolCall.name || event.toolName, streamingToolCall.argsBuffer);
@@ -555,43 +607,29 @@
   function createToolCallEl(id, name, argsStr) {
     const details = document.createElement('details');
     details.className = 'tool-call';
-
     let argsPreview = '';
     try {
       const parsed = JSON.parse(argsStr);
-      // Show first string value as preview
       for (const k in parsed) {
         const v = parsed[k];
-        if (typeof v === 'string') {
-          argsPreview = v.length > 80 ? v.slice(0, 80) + '…' : v;
-          break;
-        }
+        if (typeof v === 'string') { argsPreview = v.length > 80 ? v.slice(0, 80) + '…' : v; break; }
       }
     } catch { argsPreview = argsStr ? (argsStr.length > 80 ? argsStr.slice(0, 80) + '…' : argsStr) : ''; }
-
     const summary = document.createElement('summary');
     summary.innerHTML = '<span class="tool-name">' + escapeHtml(name || '?') + '</span> <span class="tool-args">' + escapeHtml(argsPreview) + '</span>';
-
     const resultDiv = document.createElement('div');
     resultDiv.className = 'tool-result';
     resultDiv.textContent = 'Running...';
-
     details.appendChild(summary);
     details.appendChild(resultDiv);
     messagesEl.appendChild(details);
-
-    if (id) {
-      currentToolCalls[id] = { el: details, resultEl: resultDiv, name: name };
-    }
+    if (id) currentToolCalls[id] = { el: details, resultEl: resultDiv, name: name };
     autoScroll();
   }
 
   function handleToolUpdate(data) {
     const tc = currentToolCalls[data.toolCallId];
-    if (tc && data.partialResult != null) {
-      tc.resultEl.textContent = String(data.partialResult);
-      autoScroll();
-    }
+    if (tc && data.partialResult != null) { tc.resultEl.textContent = String(data.partialResult); autoScroll(); }
   }
 
   function handleToolEnd(data) {
@@ -600,13 +638,9 @@
       let text = '';
       if (data.result != null) {
         if (typeof data.result === 'string') text = data.result;
-        else if (Array.isArray(data.result)) {
-          text = data.result.map(function(b) { return b.text || ''; }).join('\n');
-        } else {
-          text = JSON.stringify(data.result, null, 2);
-        }
+        else if (Array.isArray(data.result)) text = data.result.map(function(b) { return b.text || ''; }).join('\n');
+        else text = JSON.stringify(data.result, null, 2);
       }
-      // Truncate long results
       if (text.length > 5000) text = text.slice(0, 5000) + '\n… (truncated)';
       tc.resultEl.textContent = text || '(no output)';
       if (data.isError) tc.resultEl.classList.add('error');
@@ -615,16 +649,9 @@
     }
   }
 
-  // --- Render history ---
   function renderHistory(messages) {
     const toolResults = {};
-    // First pass: index tool results by toolCallId
-    messages.forEach(function(m) {
-      if (m.role === 'toolResult' && m.toolCallId) {
-        toolResults[m.toolCallId] = m;
-      }
-    });
-
+    messages.forEach(function(m) { if (m.role === 'toolResult' && m.toolCallId) toolResults[m.toolCallId] = m; });
     messages.forEach(function(m) {
       if (m.role === 'user') {
         const text = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.map(function(b) { return b.text || ''; }).join('') : '');
@@ -644,15 +671,12 @@
           } else if (block.type === 'toolCall') {
             const argsStr = typeof block.arguments === 'string' ? block.arguments : JSON.stringify(block.arguments, null, 2);
             createToolCallEl(block.id, block.name, argsStr);
-            // Attach result if we have one
             const tr = toolResults[block.id];
             if (tr) {
               const tc = currentToolCalls[block.id];
               if (tc) {
                 let text = '';
-                if (Array.isArray(tr.content)) {
-                  text = tr.content.map(function(b) { return b.text || ''; }).join('\n');
-                }
+                if (Array.isArray(tr.content)) text = tr.content.map(function(b) { return b.text || ''; }).join('\n');
                 if (text.length > 5000) text = text.slice(0, 5000) + '\n… (truncated)';
                 tc.resultEl.textContent = text || '(no output)';
                 if (tr.isError) tc.resultEl.classList.add('error');
@@ -662,13 +686,10 @@
           }
         });
       }
-      // toolResult messages handled inline with toolCalls above
     });
-
     autoScroll();
   }
 
-  // --- UI helpers ---
   function appendUser(text) {
     const el = document.createElement('div');
     el.className = 'msg msg-user';
@@ -707,37 +728,27 @@
     msgInput.placeholder = !isConnected ? 'Disconnected...' : !sessionReady ? 'Session loading...' : 'Message Spark...';
   }
 
-  // Auto-scroll logic
   messagesEl.addEventListener('scroll', function() {
-    const threshold = 50;
-    userScrolledUp = (messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) > threshold;
+    userScrolledUp = (messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) > 50;
   });
 
   function autoScroll() {
-    if (!userScrolledUp) {
-      messagesEl.scrollTop = messagesEl.scrollHeight;
-    }
+    if (!userScrolledUp) messagesEl.scrollTop = messagesEl.scrollHeight;
   }
 
-  // --- Input handling ---
   msgInput.addEventListener('input', function() {
     this.style.height = 'auto';
     this.style.height = Math.min(this.scrollHeight, 144) + 'px';
   });
 
   msgInput.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
 
   sendBtn.addEventListener('click', sendMessage);
 
   stopBtn.addEventListener('click', function() {
-    if (ws && ws.readyState === 1) {
-      ws.send(JSON.stringify({ type: 'abort' }));
-    }
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'abort' }));
   });
 
   function sendMessage() {
@@ -749,28 +760,15 @@
     msgInput.style.height = 'auto';
   }
 
-  // --- Markdown ---
   function renderMarkdown(text) {
-    // Code blocks first
     let html = escapeHtml(text);
-
-    // ```blocks```
-    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(_, lang, code) {
-      return '<pre><code>' + code + '</code></pre>';
-    });
-
-    // Inline code
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(_, lang, code) { return '<pre><code>' + code + '</code></pre>'; });
     html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
-
-    // Bold
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-
-    // Links (block dangerous protocols)
     html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(match, text, url) {
       if (/^(javascript|data|vbscript):/i.test(url)) return match;
       return '<a href="' + url + '" target="_blank" rel="noopener">' + text + '</a>';
     });
-
     return html;
   }
 
