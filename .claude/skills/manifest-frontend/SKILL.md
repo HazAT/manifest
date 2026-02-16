@@ -30,6 +30,8 @@ ls extensions/ | grep manifest-frontend
 
 **Always read the installed extension's `EXTENSION.md`** for preset-specific guidance (component patterns, routing, API fetching).
 
+> **Tailwind v4 + Bun:** Bun's bundler does NOT run the Tailwind compiler. It inlines `@import "tailwindcss"` but generates zero utility classes. Both presets use `bundleCss: false` + Tailwind CLI via `postBuild` in `config/frontend.ts`. If Tailwind classes aren't rendering, check these two settings first.
+
 ---
 
 ## Config

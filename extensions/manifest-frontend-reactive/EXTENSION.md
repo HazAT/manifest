@@ -35,10 +35,12 @@ cp extensions/manifest-frontend-reactive/templates/styles.css frontend/styles.cs
 ### 3. Install dependencies
 
 ```bash
-bun add solid-js tailwindcss
+bun add solid-js tailwindcss @tailwindcss/cli
 ```
 
 SolidJS is the UI framework. Tailwind v4 works via CSS `@import` — no config file needed.
+
+> **Important:** Bun's bundler does NOT run the Tailwind compiler — it just inlines the CSS import without generating utility classes. You must use the Tailwind CLI as a `postBuild` step (configured in step 5).
 
 ### 4. Configure TypeScript for SolidJS
 
@@ -70,6 +72,11 @@ export default {
   sourceMaps: true,
   spaFallback: true,
   devReload: true,
+
+  // Bun's bundler does not run the Tailwind compiler — it inlines the CSS
+  // import but produces no utility classes. Let Tailwind CLI handle CSS.
+  bundleCss: false,
+  postBuild: 'bunx @tailwindcss/cli -i frontend/styles.css -o dist/index.css --minify',
 }
 ```
 
@@ -320,14 +327,18 @@ The `styles.css` file contains:
 
 ```css
 @import "tailwindcss";
+@source "../dist";
 ```
 
-This single import gives you all of Tailwind's utility classes. Bun's bundler processes the CSS import when `tailwindcss` is installed as a dependency.
+The `@import` declares Tailwind. The `@source "../dist"` tells the Tailwind CLI to scan the built JS bundle in `dist/` for class names — this is essential because your Tailwind classes live in `.tsx` JSX that gets compiled into `dist/`.
+
+> **Why Tailwind CLI?** Bun's bundler does NOT run the Tailwind compiler. It inlines the `@import "tailwindcss"` CSS but generates zero utility classes. The Tailwind CLI runs as a `postBuild` step in `config/frontend.ts` to compile the actual utility CSS.
 
 To customize Tailwind (themes, colors, fonts), use CSS `@theme` in `styles.css`:
 
 ```css
 @import "tailwindcss";
+@source "../dist";
 
 @theme {
   --color-brand: #3b82f6;
@@ -393,10 +404,13 @@ This means SolidJS's reactivity isn't wired up correctly. Common causes:
 
 ### Styles missing or Tailwind classes not working
 
-1. Check that `frontend/styles.css` contains `@import "tailwindcss";`.
-2. Check that `index.html` has a `<link>` to the built CSS file (e.g., `<link rel="stylesheet" href="/index.css">`).
-3. Run `bun manifest frontend build` and verify `dist/index.css` exists and is not empty.
-4. SolidJS uses `class`, not `className`. If you wrote `className="..."`, it won't apply Tailwind classes.
+1. **Check `bundleCss: false` is set in `config/frontend.ts`.** Bun's bundler does NOT run the Tailwind compiler — if `bundleCss` is `true` (or unset), Bun outputs a CSS file with Tailwind's base layer but zero utility classes. This is the most common cause of "Tailwind isn't working."
+2. **Check `postBuild` is set** to run `bunx @tailwindcss/cli -i frontend/styles.css -o dist/index.css --minify`.
+3. Check that `@tailwindcss/cli` is installed: `bun pm ls | grep @tailwindcss/cli`. If missing, run `bun add @tailwindcss/cli`.
+4. Check that `frontend/styles.css` contains both `@import "tailwindcss";` and `@source "../dist";`. Without `@source`, Tailwind CLI won't scan the built JS for class names.
+5. Check that `index.html` has a `<link>` to the built CSS: `<link rel="stylesheet" href="/index.css">`.
+6. Run `bun manifest frontend build` and verify `dist/index.css` contains actual utility classes: `grep 'bg-' dist/index.css`.
+7. SolidJS uses `class`, not `className`. If you wrote `className="..."`, it won't apply Tailwind classes.
 
 ### Dev reload not working
 

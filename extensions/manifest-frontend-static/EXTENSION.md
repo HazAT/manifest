@@ -34,10 +34,12 @@ cp extensions/manifest-frontend-static/templates/styles.css frontend/styles.css
 ### 3. Install Tailwind CSS v4
 
 ```bash
-bun add tailwindcss
+bun add tailwindcss @tailwindcss/cli
 ```
 
 Tailwind v4 works via CSS `@import` — no config file needed. The `styles.css` template already has the correct import.
+
+> **Important:** Bun's bundler does NOT run the Tailwind compiler — it just inlines the CSS import without generating utility classes. You must use the Tailwind CLI as a `postBuild` step (configured in step 4).
 
 ### 4. Create the frontend config
 
@@ -54,6 +56,11 @@ export default {
   sourceMaps: true,
   spaFallback: true,
   devReload: true,
+
+  // Bun's bundler does not run the Tailwind compiler — it inlines the CSS
+  // import but produces no utility classes. Let Tailwind CLI handle CSS.
+  bundleCss: false,
+  postBuild: 'bunx @tailwindcss/cli -i frontend/styles.css -o dist/index.css --minify',
 }
 ```
 
@@ -161,14 +168,18 @@ The `styles.css` file contains:
 
 ```css
 @import "tailwindcss";
+@source "../dist";
 ```
 
-This single import gives you all of Tailwind's utility classes. Bun's bundler processes the CSS import when `tailwindcss` is installed as a dependency.
+The `@import` declares Tailwind. The `@source "../dist"` tells the Tailwind CLI to scan the built JS bundle in `dist/` for class names — this is essential because your Tailwind classes live in TypeScript template literals that get compiled into `dist/`.
+
+> **Why Tailwind CLI?** Bun's bundler does NOT run the Tailwind compiler. It inlines the `@import "tailwindcss"` CSS but generates zero utility classes. The Tailwind CLI runs as a `postBuild` step in `config/frontend.ts` to compile the actual utility CSS.
 
 To customize Tailwind (themes, colors, fonts), use CSS `@theme` in `styles.css`:
 
 ```css
 @import "tailwindcss";
+@source "../dist";
 
 @theme {
   --color-brand: #3b82f6;
@@ -184,54 +195,43 @@ Add Tailwind classes in your HTML or TypeScript template literals:
 </div>
 ```
 
-### `@source` directive — when you use Tailwind CLI separately
+### `@source` directive
 
-Bun's bundler processes Tailwind CSS inline and scans the whole project for classes. But if you use Tailwind CLI as a separate step (e.g., the blog extension uses it for the `@tailwindcss/typography` plugin), Tailwind v4 only scans for classes **relative to the CSS file's location** (`frontend/`).
+Tailwind v4 scans for classes **relative to the CSS file's location** (`frontend/`). Since your TypeScript gets compiled to `dist/`, the `@source "../dist"` directive tells Tailwind CLI to scan there too. The template already includes this.
 
-If your generated HTML lives elsewhere (e.g., `dist/`), add a `@source` directive to `styles.css`:
+If you add Tailwind classes in files outside `frontend/` or `dist/`, add more `@source` directives:
 
 ```css
 @import "tailwindcss";
 @source "../dist";
+@source "../content";
 ```
-
-Without this, Tailwind CLI won't find utility classes in generated HTML and will produce minimal or empty CSS output.
 
 ---
 
 ## Advanced Configuration
 
-These options in `config/frontend.ts` control how the build pipeline works. You don't need them for basic usage — they exist for projects with custom build steps.
+These options in `config/frontend.ts` control how the build pipeline works.
 
 ### `bundleCss`
 
-By default, Bun's bundler processes CSS imports in your entry point and outputs `dist/index.css`. This works great when Tailwind is handled inline by Bun.
+Controls whether Bun's bundler outputs CSS. Defaults to `true`, but **this extension sets it to `false`** because Bun's bundler does not run the Tailwind compiler — it inlines the CSS import but produces no utility classes.
 
-But if you run Tailwind CLI as a separate step (e.g., to use the `@tailwindcss/typography` plugin), the bundler's CSS output **overwrites** the CLI's output on every rebuild. Set `bundleCss: false` to prevent this:
+When `bundleCss` is `false`, Bun still bundles your TypeScript — it just skips CSS output entirely, leaving CSS to the Tailwind CLI `postBuild` step.
 
-```typescript
-export default {
-  entryPoint: 'frontend/index.ts',
-  outputDir: 'dist',
-  bundleCss: false,
-}
-```
-
-When `bundleCss` is `false`, Bun still bundles your TypeScript — it just skips CSS output entirely, leaving CSS to your external tool.
+If you're not using Tailwind and just want plain CSS, set `bundleCss: true` and remove `postBuild`.
 
 ### `postBuild`
 
 A shell command that runs after each frontend build. It runs in both `bun manifest frontend build` and the dev watcher, so your post-processing stays in sync during development.
 
+This extension uses it to run Tailwind CLI:
+
 ```typescript
-export default {
-  entryPoint: 'frontend/index.ts',
-  outputDir: 'dist',
-  postBuild: 'bunx @tailwindcss/cli -i frontend/styles.css -o dist/index.css --minify',
-}
+postBuild: 'bunx @tailwindcss/cli -i frontend/styles.css -o dist/index.css --minify',
 ```
 
-Use cases: Tailwind CLI, blog generators, image optimization, any post-processing that needs to run after the bundle.
+Other use cases: blog generators, image optimization, any post-processing that needs to run after the bundle.
 
 ### `watchDirs`
 
@@ -317,10 +317,13 @@ When the frontend isn't working, run through these checks in order.
 
 ### Styles missing or Tailwind classes not working
 
-1. Check that `frontend/styles.css` contains `@import "tailwindcss";`.
-2. Check that `index.html` has a `<link>` to the built CSS file (e.g., `<link rel="stylesheet" href="/index.css">`).
-3. Run `bun manifest frontend build` and verify `dist/index.css` exists and is not empty.
-4. If classes exist in CSS but don't render, hard-refresh the browser (`Cmd+Shift+R`) — the old CSS may be cached.
+1. **Check `bundleCss: false` is set in `config/frontend.ts`.** Bun's bundler does NOT run the Tailwind compiler — if `bundleCss` is `true` (or unset), Bun outputs a CSS file with Tailwind's base layer but zero utility classes. This is the most common cause of "Tailwind isn't working."
+2. **Check `postBuild` is set** to run `bunx @tailwindcss/cli -i frontend/styles.css -o dist/index.css --minify`.
+3. Check that `@tailwindcss/cli` is installed: `bun pm ls | grep @tailwindcss/cli`. If missing, run `bun add @tailwindcss/cli`.
+4. Check that `frontend/styles.css` contains both `@import "tailwindcss";` and `@source "../dist";`. Without `@source`, Tailwind CLI won't scan the built JS for class names.
+5. Check that `index.html` has a `<link>` to the built CSS: `<link rel="stylesheet" href="/index.css">`.
+6. Run `bun manifest frontend build` and verify `dist/index.css` contains actual utility classes: `grep 'bg-' dist/index.css`.
+7. If classes exist in CSS but don't render, hard-refresh the browser (`Cmd+Shift+R`) — the old CSS may be cached.
 
 ### Dev reload not working
 
@@ -338,8 +341,8 @@ When the frontend isn't working, run through these checks in order.
 ### Dev watcher overwrites my CSS
 
 1. **Symptom:** CSS styles disappear or revert after saving a file in `frontend/`.
-2. **Cause:** Bun's bundler re-outputs `dist/index.css` on each rebuild, overwriting the CSS that Tailwind CLI (or another external tool) produced.
-3. **Fix:** Set `bundleCss: false` in `config/frontend.ts`. This tells the bundler to skip CSS output entirely, leaving `dist/index.css` to your external tool. Use `postBuild` to run your CSS tool after each build.
+2. **Cause:** `bundleCss` is not set to `false` in `config/frontend.ts`. Bun's bundler re-outputs `dist/index.css` on each rebuild, overwriting the CSS that Tailwind CLI produced.
+3. **Fix:** Set `bundleCss: false` in `config/frontend.ts`. The default config from this extension already does this — if you're seeing this issue, your config may have been overwritten or created manually without it.
 
 ### SPA routing returns 404
 
