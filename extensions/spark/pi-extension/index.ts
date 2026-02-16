@@ -491,20 +491,7 @@ You understand Manifest conventions: features are in features/, one file per beh
   pi.on('session_start', async (_event, ctx) => {
     sessionCtx = ctx
     config = await readConfig(ctx.cwd)
-    if (!config || !config.enabled) {
-      if (isSidecar) {
-        const reason = !config
-          ? 'config/spark.ts not found'
-          : 'Spark is disabled (enabled: false in config/spark.ts)'
-        pi.sendMessage({
-          customType: 'spark-error',
-          content: `❌ **Spark sidecar cannot start** — ${reason}.\n\nThe sidecar requires Spark to be enabled. Check your config/spark.ts and try again.`,
-          display: true,
-        })
-        ctx.shutdown()
-      }
-      return
-    }
+    if (!config || !config.enabled) return
 
     const profile = getEnvProfile(config)
     const eventsDir = path.resolve(ctx.cwd, config.eventsDir)
