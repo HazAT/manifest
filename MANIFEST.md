@@ -2,7 +2,7 @@
 
 ## System
 - Runtime: Bun 1.3.1, TypeScript, Manifest 0.1.x
-- Generated: 2026-02-15
+- Generated: 2026-02-16
 
 ## Architecture
 This is a Manifest application. All behavior lives in feature files.
@@ -33,6 +33,7 @@ This is a Manifest application. All behavior lives in feature files.
 | manifest-drizzle-postgres | 0.1.0 | Drizzle ORM + Postgres preset. Provides templates and setup instructions for database access. |
 | manifest-frontend-static | 0.1.0 | HTML + Tailwind CSS + vanilla TypeScript frontend preset. No framework, no virtual DOM. |
 | manifest-frontend-reactive | 0.1.0 | SolidJS + Tailwind CSS frontend preset. Fine-grained reactivity without a virtual DOM. |
+| spark | 0.1.0 | Reactive AI sidekick for Manifest apps. Watches for errors and events, emits them to a file-based bus for consumption by a Pi agent. |
 
 ## Known Issues
 - None currently.
