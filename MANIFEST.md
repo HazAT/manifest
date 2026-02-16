@@ -31,6 +31,7 @@ This is a Manifest application. All behavior lives in feature files.
 |------|---------|-------------|
 | manifest-sse-example | 0.1.0 | Example SSE streaming extension with a demo feature and frontend consumption guides. |
 | manifest-content-blog | 0.1.0 | Markdown blog with static HTML output. Posts in content/posts/, built with marked + Tailwind Typography. |
+| spark-web | 0.1.0 | Browser dashboard for the Spark AI sidekick. Embeds a Pi agent session in the Manifest server and serves a real-time web UI for interacting with Spark. |
 | manifest-drizzle-postgres | 0.1.0 | Drizzle ORM + Postgres preset. Provides templates and setup instructions for database access. |
 | manifest-frontend-static | 0.1.0 | HTML + Tailwind CSS + vanilla TypeScript frontend preset. No framework, no virtual DOM. |
 | manifest-frontend-reactive | 0.1.0 | SolidJS + Tailwind CSS frontend preset. Fine-grained reactivity without a virtual DOM. |
