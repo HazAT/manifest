@@ -40,32 +40,42 @@ This does three things:
 - Adds the Spark Pi extension path to `.pi/settings.json`
 - Adds process hooks to `index.ts` for uncaught errors
 
-### 2. Start Pi
+### 2. Start Spark
 
-Pi ships as a project dependency of Manifest (`@mariozechner/pi-coding-agent`). No global install needed.
+Spark runs as a **web sidecar** — a separate Bun process with a browser dashboard. Set `web.enabled: true` and a `SPARK_WEB_TOKEN` in `config/spark.ts`, then:
 
 ```bash
-# Human Pi — your interactive session (coordination is automatic)
-bunx pi
+# Start the Spark sidecar (watches for errors, browser dashboard on port 8081)
+SPARK_WEB_TOKEN=your-token bun extensions/spark-web/services/sparkWeb.ts
 
-# Spark sidecar — watches for errors and coordinates with human agents
-SPARK_ROLE=sidecar bunx pi
+# Open the dashboard
+open http://localhost:8081/
 ```
 
-Spark auto-loads via the extension path registered in `.pi/settings.json`. The `SPARK_ROLE` env var tells Spark whether this instance is a human-operated session or the sidecar. Human Pi instances need no special flags — coordination is automatic.
+The sidecar runs on its own port and **survives main server crashes** — you can still talk to Spark and investigate even when your app is down. See `extensions/spark-web/EXTENSION.md` for full setup.
+
+### 3. Human Pi (Optional)
+
+For interactive coding sessions, Pi ships as a project dependency:
+
+```bash
+bunx pi
+```
+
+Spark auto-loads via `.pi/settings.json`. Human Pi sessions coordinate automatically with the Spark sidecar — when you're actively making changes, Spark backs off. No manual pause needed.
 
 You'll need an API key for your preferred LLM provider (Anthropic, OpenAI, etc.) — Pi uses your own subscription. Run `pi` and it will guide you through API key setup on first launch.
 
 **Already have Pi installed globally?** That works too — just run `pi` in the project directory. The local `.pi/settings.json` tells it to load Spark regardless of how Pi was installed.
 
-### 3. Verify it works
+### 4. Verify it works
 
 1. Start your app: `bun --hot index.ts`
 2. Trigger a 500 error (e.g., call a feature that hits a missing database)
 3. Check that an event file appears in `.spark/events/`
 4. If Pi is running, look for the error context appearing in your Pi session
 
-### 4. Start a fresh session
+### 5. Start a fresh session
 
 After running `spark init`, **start a new Pi session** (close and reopen `bunx pi`). This ensures the Spark extension is loaded from the start with full context — system prompt, skills, and project awareness all wired in correctly.
 
@@ -75,15 +85,15 @@ On first startup in a new project, Spark will proactively orient itself: reading
 
 ---
 
-## Web UI Mode (Alternative)
+## Web Sidecar
 
-Spark can also run as a **sidecar process** with a browser-based dashboard, instead of (or alongside) the standalone terminal. When the web UI is enabled, the main server auto-spawns a separate sidecar process on its own port (default 8081) that hosts a Pi agent session with the Spark extension loaded. The event watching, system prompt injection, and error handling all work identically.
+The Spark sidecar is a separate Bun process with a browser dashboard on port 8081. It hosts a Pi agent session with the Spark extension loaded. The event watching, system prompt injection, and error handling all work identically to a terminal Pi session.
 
 **The sidecar survives main server crashes.** Because it runs as its own process, you can still access the dashboard and ask Spark to investigate what happened even if your app goes down.
 
-To enable: set `web.enabled: true` and `SPARK_WEB_TOKEN` in `config/spark.ts`, then start the sidecar: `SPARK_WEB_TOKEN=xxx bun extensions/spark-web/services/sparkWeb.ts`. Open `http://localhost:8081/` and log in with your token.
+To start: set `web.enabled: true` and `SPARK_WEB_TOKEN` in `config/spark.ts`, then run `SPARK_WEB_TOKEN=xxx bun extensions/spark-web/services/sparkWeb.ts`. Open `http://localhost:8081/` and log in with your token.
 
-The standalone `bunx pi` mode and web UI mode are fully compatible — you can use either, or both simultaneously.
+Human Pi sessions (`bunx pi`) and the web sidecar are fully compatible — you can use both simultaneously.
 
 See `extensions/spark-web/EXTENSION.md` for full setup, architecture, and troubleshooting.
 
@@ -271,14 +281,9 @@ The lifecycle:
 
 Only mutating tool calls (`write`, `edit`, `bash`) trigger the `"working"` status. Read-only tools like `read`, `todo`, and `subagent` don't pause the sidecar.
 
-### Role Detection: `SPARK_ROLE`
+### Role Detection
 
-The `SPARK_ROLE` environment variable distinguishes human Pi sessions from the sidecar. It's a per-process setting — not part of `config/spark.ts` — because the same project can have both roles running simultaneously.
-
-| Value | Behavior |
-|-------|----------|
-| *(unset or anything else)* | **Human mode** — creates/updates agent presence files, shows ambient status bar |
-| `sidecar` | **Sidecar mode** — watches `.spark/agents/`, auto-pauses when agents are working |
+The Spark extension detects whether it's running in a human Pi session or the web sidecar. Human Pi sessions (started via `bunx pi`) run in **human mode** — they create agent presence files and show ambient status. The web sidecar runs in **sidecar mode** — it watches `.spark/agents/` and auto-pauses when human agents are working.
 
 ### Human Pi Behavior
 
@@ -293,7 +298,7 @@ Status messages rotate — new messages replace old ones.
 
 ### Sidecar Behavior
 
-The sidecar (`SPARK_ROLE=sidecar`) watches both `.spark/events/` and `.spark/agents/`:
+The web sidecar watches both `.spark/events/` and `.spark/agents/`:
 
 1. **Agent file appears** → injects message into conversation: agent joined
 2. **Agent status → working** → buffers incoming error events (auto-pause)
@@ -415,11 +420,11 @@ This means the Pi extension isn't running or has crashed.
 
 ### Sidecar not pausing when an agent is working
 
-1. Verify the sidecar was started with the role env var:
+1. Verify the web sidecar is running:
    ```bash
-   SPARK_ROLE=sidecar bunx pi
+   SPARK_WEB_TOKEN=your-token bun extensions/spark-web/services/sparkWeb.ts
    ```
-   Without `SPARK_ROLE=sidecar`, the instance runs as a human Pi and won't watch for agent presence.
+   The web sidecar automatically runs in sidecar mode and watches for agent presence.
 2. Check that agent files exist in `.spark/agents/`:
    ```bash
    ls -la .spark/agents/
@@ -442,7 +447,7 @@ This is safe — running Pi instances will recreate their files on the next tool
 
 ### Agent file not created
 
-1. Confirm `SPARK_ROLE` is **not** set to `sidecar`. Only human Pi instances create agent files; the sidecar only watches them.
+1. Confirm this is a human Pi session (`bunx pi`), not the web sidecar. Only human Pi instances create agent files; the sidecar only watches them.
 2. Verify the Spark extension is loaded:
    ```bash
    cat .pi/settings.json
