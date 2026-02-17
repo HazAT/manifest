@@ -30,7 +30,7 @@ No telemetry. No install scripts. No magic. It's a markdown file with instructio
 
 ---
 
-The first framework where the agent isn't using the framework — it **is** the framework. Manifest is source code the whole way down. No npm package, no hidden runtime, no abstractions the agent can't read. The framework ships inside your project as ~1,000 lines of TypeScript that the agent wrote, understands, and evolves alongside your application.
+The first framework where the agent isn't using the framework — it **is** the framework. Manifest is source code the whole way down. No npm package, no hidden runtime, no abstractions the agent can't read. The framework ships inside your project as TypeScript that the agent wrote, understands, and evolves alongside your application.
 
 Built on Bun. No build step. No magic.
 
@@ -170,19 +170,19 @@ Most frameworks are black boxes behind `node_modules/`. Manifest is different:
 
 ```
 manifest/
-├── server.ts        # Bun.serve() wrapper — 109 lines
-├── feature.ts       # defineFeature() — 83 lines
-├── types.ts         # t.string(), t.integer(), etc. — 141 lines
-├── validator.ts     # Input validation — 92 lines
-├── router.ts        # HTTP route matching — 76 lines
-├── envelope.ts      # Response formatting — 65 lines
-├── scanner.ts       # Feature directory scanner — 33 lines
-├── testing.ts       # Test client — 73 lines
-├── index.ts         # Barrel exports — 31 lines
-└── cli/             # serve, index, check, make:feature — 352 lines
+├── server.ts        # Bun.serve() wrapper
+├── feature.ts       # defineFeature()
+├── types.ts         # t.string(), t.integer(), etc.
+├── validator.ts     # Input validation
+├── router.ts        # HTTP route matching
+├── envelope.ts      # Response formatting
+├── scanner.ts       # Feature directory scanner
+├── testing.ts       # Test client
+├── index.ts         # Barrel exports
+└── cli/             # serve, index, check, make:feature
 ```
 
-**1,055 lines total.** An agent reads the entire framework in seconds. It doesn't just use Manifest — it *understands* Manifest. When something breaks, the agent doesn't search Stack Overflow. It reads `manifest/router.ts` (76 lines) and fixes the routing. It reads `manifest/validator.ts` (92 lines) and adds a new validation rule.
+An agent reads the entire framework in seconds. It doesn't just use Manifest — it *understands* Manifest. When something breaks, the agent doesn't search Stack Overflow. It reads `manifest/router.ts` and fixes the routing. It reads `manifest/validator.ts` and adds a new validation rule.
 
 The agent builds the framework as it builds the application. They're the same codebase. There is no boundary between "framework code" and "application code" — just code the agent wrote, reads, and evolves.
 
@@ -301,7 +301,7 @@ Every design decision in Manifest exists to make this loop fast, safe, and relia
 ```
 manifest-app/
 ├── MANIFEST.md             # Auto-generated. The agent reads this first.
-├── manifest/               # THE FRAMEWORK. Source code. ~1,000 lines.
+├── manifest/               # THE FRAMEWORK. Source code.
 ├── features/               # One file per behavior. This IS the app.
 │   ├── UserRegistration.ts
 │   ├── UserLogin.ts
@@ -310,7 +310,7 @@ manifest-app/
 ├── services/               # Plain exported functions. No DI container.
 ├── config/                 # Typed TypeScript. No YAML, no .env magic.
 ├── tests/                  # Mirrors features/ 1:1.
-├── index.ts                # Entry point. 4 lines.
+├── index.ts                # Entry point.
 └── package.json
 ```
 
@@ -352,7 +352,7 @@ bun run manifest check              # Validate conventions
 bun run manifest make:feature Name  # Scaffold a new feature
 ```
 
-The CLI is 352 lines of TypeScript. No framework. Just `process.argv`.
+The CLI is plain TypeScript. No framework. Just `process.argv`.
 
 ---
 
@@ -567,7 +567,7 @@ The distinction matters. When an agent is the primary author:
 
 - **Code must be self-describing.** Not through comments, but through structure. Every feature declares its purpose, its inputs, its side effects, its error cases — as data, not as documentation that drifts.
 
-- **The framework must be transparent.** An agent that can't read the framework can't fix the framework. Manifest is 1,055 lines of source code in your project. The agent has read every line. It wrote most of them.
+- **The framework must be transparent.** An agent that can't read the framework can't fix the framework. Manifest is source code in your project. The agent has read every line. It wrote most of them.
 
 - **Hot reload must be real.** Not "restart the process" real. Module-level hot swap real. The agent patches a file and the next request uses the new code. No deploy pipeline. No container rebuild. Edit → live.
 

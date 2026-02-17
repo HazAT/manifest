@@ -8,13 +8,13 @@ You are working on a Manifest project. Read this file completely before writing 
 
 ## What This Is
 
-Manifest is a TypeScript/Bun framework where every piece of code is written to be read, understood, and modified by AI agents. The framework ships as source code inside the project — not as an npm package. You can read every line of framework code in `manifest/` (~3,100 lines total).
+Manifest is a TypeScript/Bun framework where every piece of code is written to be read, understood, and modified by AI agents. The framework ships as source code inside the project — not as an npm package. You can read every line of framework code in `manifest/`.
 
 Manifest ships with **Spark**, a reactive AI sidekick that watches your running application and responds to errors in real time. Your app doesn't just get built by agents — it gets *watched* by one. When something breaks, Spark sees the error before you do, reads the stack trace, opens the feature file, and either fixes it or tells you exactly what happened. This isn't a monitoring dashboard. It's an agent that understands your code because it helped write it.
 
 ## Principles
 
-**Read every line you touch.** Before modifying a file, read it. Before calling a function, read its implementation. The framework is ~3,100 lines — you can read all of it. Don't guess what `createRouter()` does; open `manifest/router.ts` (76 lines) and know. This applies to agents and humans equally. If something needs your attention, read the source. The answers are in the code, not in assumptions.
+**Read every line you touch.** Before modifying a file, read it. Before calling a function, read its implementation. The framework is small enough to read all of it. Don't guess what `createRouter()` does; open `manifest/router.ts` and know. This applies to agents and humans equally. If something needs your attention, read the source. The answers are in the code, not in assumptions.
 
 **Trust the defaults.** The framework has made deliberate choices: `defineFeature()` for behavior, `t.string()` for inputs, JSON envelopes for responses, `Bun.serve()` for HTTP. Lean into these patterns. Don't reach for Express middleware when `handle()` already solves it. Don't add a validation library when `manifest/validator.ts` already handles it. If a proven structure exists, use it.
 
@@ -350,21 +350,21 @@ The sidecar runs as a separate process on its own port — same Spark extension,
 
 ## The Framework
 
-The framework lives in `manifest/`. It's ~3,100 lines total. Read it:
+The framework lives in `manifest/`. Read it:
 
-| File | Lines | What it does |
-|------|-------|-------------|
-| `types.ts` | 141 | Input type builders: `t.string()`, `t.integer()`, etc. |
-| `validator.ts` | 103 | Validates input against schema. Formats, lengths, ranges. |
-| `feature.ts` | 175 | `defineFeature()` and all feature types (request, stream, event). |
-| `server.ts` | 325 | `Bun.serve()` wrapper. Route matching → rate limiting → validation → execution → envelope. SSE streaming. |
-| `router.ts` | 72 | HTTP route matching with path parameters. |
-| `envelope.ts` | 65 | Response formatting. `ok()`, `fail()`, `toEnvelope()`. |
-| `scanner.ts` | 78 | Scans features directory and extensions, dynamically imports `.ts` files. |
-| `testing.ts` | 124 | `createTestClient()` — call features by name without HTTP. Stream testing. |
-| `frontend.ts` | 181 | `Bun.build()` wrapper, static file serving, live reload. |
-| `index.ts` | 31 | Barrel export for framework types and utilities. |
-| `cli/` | ~2250 | CLI commands: status, serve, index, check, learn, doctor, make:feature, extension (make/install/list), frontend, spark, run. Each command exports `meta` for self-documentation. |
+| File | What it does |
+|------|-------------|
+| `types.ts` | Input type builders: `t.string()`, `t.integer()`, etc. |
+| `validator.ts` | Validates input against schema. Formats, lengths, ranges. |
+| `feature.ts` | `defineFeature()` and all feature types (request, stream, event). |
+| `server.ts` | `Bun.serve()` wrapper. Route matching → rate limiting → validation → execution → envelope. SSE streaming. |
+| `router.ts` | HTTP route matching with path parameters. |
+| `envelope.ts` | Response formatting. `ok()`, `fail()`, `toEnvelope()`. |
+| `scanner.ts` | Scans features directory and extensions, dynamically imports `.ts` files. |
+| `testing.ts` | `createTestClient()` — call features by name without HTTP. Stream testing. |
+| `frontend.ts` | `Bun.build()` wrapper, static file serving, live reload. |
+| `index.ts` | Barrel export for framework types and utilities. |
+| `cli/` | CLI commands: status, serve, index, check, learn, doctor, make:feature, extension (make/install/list), frontend, spark, run. Each command exports `meta` for self-documentation. |
 
 If something in the framework doesn't work for your use case, modify it. It's your code.
 
@@ -507,7 +507,7 @@ Every event carries a `traceId` that links back to the original request. For ser
 ## When In Doubt
 
 1. Run `bun manifest status` — quick health check, shows what needs attention.
-2. Read the source. The framework is ~3,100 lines. The answers are there.
+2. Read the source. The answers are there.
 3. Read `MANIFEST.md` — it's the index of everything (features, extensions, CLI commands).
 4. Read the feature file — it's self-contained.
 5. Run `bun manifest check` — it validates conventions.
