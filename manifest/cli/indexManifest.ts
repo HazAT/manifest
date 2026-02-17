@@ -108,22 +108,9 @@ export async function indexManifest(_args: string[]): Promise<void> {
   }
 
   md += `## Known Issues\n`
-  md += `- None currently.\n\n`
-
-  md += `## Recent Changes\n`
+  md += `- None currently.\n`
 
   const manifestPath = path.join(projectDir, 'MANIFEST.md')
-  if (existsSync(manifestPath)) {
-    const existing = await Bun.file(manifestPath).text()
-    const changesMatch = existing.match(/## Recent Changes\n([\s\S]*)$/)
-    if (changesMatch) {
-      const existingChanges = changesMatch[1]!.trim()
-      if (existingChanges) {
-        md += existingChanges + '\n'
-      }
-    }
-  }
-
   await Bun.write(manifestPath, md)
   console.log(`\n  ✓ MANIFEST.md generated with ${features.length} features indexed.`)
   console.log(`  Review MANIFEST.md for accuracy, then commit if it looks correct.\n`)

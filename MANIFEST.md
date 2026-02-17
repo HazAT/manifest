@@ -2,7 +2,7 @@
 
 ## System
 - Runtime: Bun 1.3.1, TypeScript, Manifest 0.1.x
-- Generated: 2026-02-16
+- Generated: 2026-02-17
 
 ## Architecture
 This is a Manifest application. All behavior lives in feature files.
@@ -64,5 +64,3 @@ Start here: `bun manifest status` for a quick health check.
 
 ## Known Issues
 - None currently.
-
-## Recent Changes

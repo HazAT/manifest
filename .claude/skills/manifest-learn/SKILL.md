@@ -30,7 +30,7 @@ Is `MANIFEST.md` still accurate?
 bun run manifest index
 ```
 
-This regenerates the feature index automatically. But also check: does the "Known Issues" section need updating? Does "Recent Changes" reflect what just happened?
+This regenerates the feature index automatically. But also check: does the "Known Issues" section need updating?
 
 ### 2. AGENTS.md
 
