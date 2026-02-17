@@ -257,18 +257,63 @@ export const tableName = pgTable('table_name', {
 
 ## How to Write a Service
 
-Plain exported functions. No classes. No DI container. TypeScript's module system is the dependency injection:
+Services are shared logic that multiple features (or scripts) can import. Plain exported objects with methods. No classes. No DI container. TypeScript's module system is the dependency injection.
+
+Use `bun manifest service make <Name>` to scaffold a new service file with the correct structure.
+
+### When to create a service
+
+- **Two features need the same logic** → extract to a service
+- **A build script has logic that could be reused** → extract to a service
+- **You're writing a helper that isn't specific to one feature** → service
+
+### When NOT to create a service
+
+If the logic is only used in one feature, keep it inline. Don't create a service for a single call site. You can always extract later when a second consumer appears.
+
+### Template
 
 ```typescript
-/** What this service does and when to use it. */
-export const serviceName = {
-  async doThing(opts: { ... }): Promise<void> {
+import type { SomeType } from '../schemas/someSchema'
+
+/**
+ * Handles markdown parsing and rendering for blog content.
+ * Used by blog-related features and the RSS feed generator.
+ */
+export const markdown = {
+  /**
+   * Parse raw markdown string into structured frontmatter and HTML body.
+   * Returns null if the markdown is malformed or missing required frontmatter.
+   */
+  async parse(raw: string): Promise<{ frontmatter: Record<string, string>; html: string } | null> {
+    // Implementation
+  },
+
+  /**
+   * Render a blog post to full HTML with syntax highlighting and image optimization.
+   * Throws if the post has not been parsed first.
+   */
+  async render(post: SomeType): Promise<string> {
+    // Implementation
+  },
+
+  /**
+   * Extract all image URLs from markdown content for prefetching.
+   */
+  extractImages(raw: string): string[] {
     // Implementation
   },
 }
 ```
 
-Features import services directly: `import { serviceName } from '../services/serviceName'`
+### Guidelines
+
+- **JSDoc on every export** — describe what the function does, its parameters, and edge cases.
+- **Pure functions preferred** — take input, return output. Minimize hidden state.
+- **No classes** — use plain objects with methods.
+- **Typed parameters** — use explicit types or interfaces, not `any`.
+- **One responsibility per service** — a service does one thing well. `markdown` parses markdown. `mailer` sends email. Don't combine unrelated logic.
+- **Features import services directly** — `import { markdown } from '../services/markdown'`. No registry, no DI.
 
 ## CLI Commands
 
