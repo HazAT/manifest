@@ -1,7 +1,5 @@
 # Manifest
 
-> *Production is our dev environment.*
-
 ### Start building in 10 seconds
 
 Paste this into your AI agent (Claude, Cursor, Copilot, any agent with terminal access):
@@ -581,31 +579,4 @@ The answer turns out to be the same things good engineering has always valued: e
 
 ---
 
-## Status
 
-Manifest is in active development. The core framework and key extensions are complete:
-
-- ✅ Feature system (`defineFeature`, typed inputs, `ok`/`fail` helpers)
-- ✅ Input validation (types, formats, constraints)
-- ✅ HTTP server (Bun.serve, routing, path params, JSON envelopes)
-- ✅ SSE streaming (`type: 'stream'` features with `emit`/`close`/`fail`)
-- ✅ Test client (call features by name, no HTTP; stream testing)
-- ✅ CLI (serve, index, check, make:feature, frontend, extensions, doctor)
-- ✅ MANIFEST.md generation
-- ✅ Convention validation
-- ✅ Frontend support (static + reactive presets via extensions)
-- ✅ Drizzle ORM + Postgres (via `manifest-drizzle-postgres` extension)
-- ✅ Extensions ecosystem (make, install, list, scanner)
-
-Coming next:
-- ⬜ Authentication & authorization
-- ⬜ Rate limiting
-- ⬜ Event-triggered features
-- ⬜ Agent sidecar (error tracking integration, self-healing loop)
-- ✅ Docker deployment
-
----
-
-<p align="center">
-  <em>Production is our dev environment.</em>
-</p>
