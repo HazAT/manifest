@@ -119,9 +119,11 @@ Write it as step-by-step checks an agent can follow to self-repair.]
 \`\`\`
 
 3. Create subdirectories based on what the extension will contain:
-   - \`extensions/${name}/features/\` — if it provides API features
-   - \`extensions/${name}/schemas/\` — if it defines database tables
-   - \`extensions/${name}/services/\` — if it provides shared services
+   - \`extensions/${name}/features/\` — for HTTP endpoints using \`defineFeature()\`
+   - \`extensions/${name}/schemas/\` — for database table definitions
+   - \`extensions/${name}/services/\` — for shared reusable logic (parsing, data loading, generation, etc.)
+
+   **Features vs Services:** Features are HTTP endpoints that handle requests. Services are shared logic that features (and other code) import. If your extension has reusable logic that isn't an endpoint, put it in \`services/\`. Use \`bun manifest service make <Name>\` to scaffold service files with JSDoc templates.
 
 4. Run \`bun manifest index\` to regenerate MANIFEST.md.
 
