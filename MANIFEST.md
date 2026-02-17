@@ -8,7 +8,7 @@
 This is a Manifest application. All behavior lives in feature files.
 - features/ - One file per application behavior (2 features)
 - schemas/ - Drizzle ORM table definitions (0 schemas)
-- services/ - Shared services (1 services)
+- services/ - Shared services (2 services)
 - commands/ - CLI commands (0 commands)
 
 ## Conventions
@@ -35,7 +35,7 @@ This is a Manifest application. All behavior lives in feature files.
 | manifest-drizzle-postgres | 0.1.0 | Drizzle ORM + Postgres preset. Provides templates and setup instructions for database access. |
 | manifest-frontend-static | 0.1.0 | HTML + Tailwind CSS + vanilla TypeScript frontend preset. No framework, no virtual DOM. |
 | manifest-frontend-reactive | 0.1.0 | SolidJS + Tailwind CSS frontend preset. Fine-grained reactivity without a virtual DOM. |
-| spark | 0.1.0 | Reactive AI sidekick for Manifest apps. Watches for errors and events, emits them to a file-based bus for consumption by a Pi agent. |
+| spark | 0.1.0 | Reactive AI sidekick for Manifest apps. Captures errors and access logs in a SQLite database, polled by a Pi agent extension for real-time investigation and fixes. |
 
 
 ## CLI Commands
@@ -48,6 +48,7 @@ This is a Manifest application. All behavior lives in feature files.
 | `bun manifest learn` | Scan for staleness and inconsistencies after changes |
 | `bun manifest doctor` | Diagnose system issues, check extensions, show debugging guidance |
 | `bun manifest feature make <Name> [--route="METHOD /path"] [--auth=none|required] [--type=stream]` | Output an agent prompt for scaffolding a new feature (no files written) |
+| `bun manifest service make <Name>` | Output an agent prompt for scaffolding a new service (no files written) |
 | `bun manifest extension make <name>` | Output an agent prompt for scaffolding a new extension (no files written) |
 | `bun manifest extension install <url|name>` | Output an agent prompt for installing an extension from GitHub or npm |
 | `bun manifest extension list` | List all installed extensions with version and description |
@@ -56,9 +57,7 @@ This is a Manifest application. All behavior lives in feature files.
 | `bun manifest frontend dev` | Start a standalone frontend file watcher with live reload |
 | `bun manifest run <command> [args...]` | Run a command with output logging and Spark error reporting |
 | `bun manifest spark init` | Initialize Spark sidekick (config, Pi extension, .gitignore) |
-| `bun manifest spark pause [reason]` | Pause Spark event processing (use when making changes) |
-| `bun manifest spark resume` | Resume Spark event processing |
-| `bun manifest spark status` | Show current Spark status (enabled, environment, paused, events) |
+| `bun manifest spark status` | Show current Spark status (enabled, environment, events, DB) |
 
 Start here: `bun manifest status` for a quick health check.
 
