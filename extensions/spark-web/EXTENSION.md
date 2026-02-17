@@ -26,7 +26,7 @@ A browser dashboard for the Spark AI sidekick. This extension runs a **separate 
 The sidecar is a standalone process you start separately from your main server:
 
 1. **Starts its own `Bun.serve()`** on a separate port (default 8081), independent of the main app server.
-2. **Creates a Pi AgentSession** using the Pi SDK, with the Spark extension loaded. This is the same agent that would run in your terminal — it watches `.spark/events/` for errors and reacts according to your environment config.
+2. **Creates a Pi AgentSession** using the Pi SDK, with the Spark extension loaded. This is the same agent that would run in your terminal — it polls the SQLite database for errors and reacts according to your environment config.
 3. **Serves a web dashboard** at `http://localhost:8081/` — a single HTML page with a conversation UI.
 4. **Bridges WebSocket connections** between the browser and the agent session. Messages you type go to the agent; responses, tool calls, and Spark events stream back in real time.
 
@@ -229,12 +229,12 @@ Check the full error message in the sidecar's output for specifics.
    ```bash
    bun run manifest spark status
    ```
-2. Verify `.spark/events/` directory exists and events are being written:
+2. Verify events are being written to the database:
    ```bash
-   ls -la .spark/events/
+   bun -e "import { sparkDb } from './services/sparkDb'; console.log(sparkDb.getRecentEvents(5))"
    ```
 3. Check `config/spark.ts` — ensure `enabled: true` and the relevant `watch` options are on.
-4. Trigger a test error and check if an event file appears in `.spark/events/`.
+4. Trigger a test error and check if an event appears in the database.
 
 ### Sidecar keeps running after server stops
 
