@@ -109,6 +109,70 @@ export async function check(_args: string[]): Promise<number> {
     } catch {}
   }
 
+  // Check service exports have JSDoc
+  const serviceWarnings: string[] = []
+  const serviceDirs = [path.join(projectDir, 'services')]
+
+  // Also scan extension service directories
+  if (existsSync(extensionsDir)) {
+    try {
+      const entries = readdirSync(extensionsDir, { withFileTypes: true })
+        .filter(d => d.isDirectory() || d.isSymbolicLink())
+      for (const entry of entries) {
+        const extServicesDir = path.join(extensionsDir, entry.name, 'services')
+        if (existsSync(extServicesDir)) {
+          serviceDirs.push(extServicesDir)
+        }
+      }
+    } catch {}
+  }
+
+  for (const dir of serviceDirs) {
+    if (!existsSync(dir)) continue
+    try {
+      const files = readdirSync(dir).filter(f => f.endsWith('.ts'))
+      for (const file of files) {
+        const filePath = path.join(dir, file)
+        const relativePath = path.relative(projectDir, filePath)
+        const content = readFileSync(filePath, 'utf-8')
+        const lines = content.split('\n')
+
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i].trimStart()
+
+          // Skip default exports and re-exports
+          if (line.startsWith('export default ') || line.startsWith('export {')) continue
+
+          // Match named exports
+          const exportMatch = line.match(/^export\s+(?:async\s+)?(?:function|const|interface|type)\s+(\w+)/)
+          if (!exportMatch) continue
+
+          const exportName = exportMatch[1]
+
+          // Check if previous non-empty line ends with */
+          let hasJsDoc = false
+          for (let j = i - 1; j >= 0; j--) {
+            const prev = lines[j].trim()
+            if (prev === '') continue
+            if (prev.endsWith('*/')) hasJsDoc = true
+            break
+          }
+
+          if (!hasJsDoc) {
+            serviceWarnings.push(`Service '${relativePath}' export '${exportName}' has no JSDoc description. → Add a /** ... */ comment above the export.`)
+          }
+        }
+      }
+    } catch {}
+  }
+
+  for (const warning of serviceWarnings) {
+    console.log(`  \x1b[33m⚠\x1b[0m ${warning}`)
+  }
+  if (serviceWarnings.length === 0) {
+    passes.push('All service exports have JSDoc descriptions.')
+  }
+
   if (existsSync(path.join(projectDir, 'MANIFEST.md'))) {
     passes.push('MANIFEST.md exists.')
   } else {
