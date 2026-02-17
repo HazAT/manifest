@@ -264,25 +264,28 @@ export async function startSparkSidecar(config: SparkSidecarConfig): Promise<voi
     const cwd = config.projectDir
     const sparkExtensionPath = path.resolve(cwd, 'extensions/spark/pi-extension/index.ts')
 
-    // Separate local paths from package sources (npm/git)
-    const isPackageSource = (s: string) =>
-      s.startsWith('npm:') || s.startsWith('git:') || s.startsWith('https://') || s.startsWith('http://') || s.startsWith('ssh://')
+    // Load Spark extension via Bun-native import
+    const sparkFactory = (await import(sparkExtensionPath)).default
 
+    // Load additional local extensions via native import
     const userExtensions = config.web.extensions || []
-    const localPaths = userExtensions.filter(e => !isPackageSource(e)).map(e => path.resolve(cwd, e))
-    const packageSources = userExtensions.filter(isPackageSource)
+    const localFactories = []
+    for (const ext of userExtensions) {
+      try {
+        const mod = await import(path.resolve(cwd, ext))
+        if (typeof mod.default === 'function') localFactories.push(mod.default)
+      } catch (err) {
+        console.error(`[spark-web] Failed to load extension: ${ext}`, err)
+      }
+    }
 
     const authStorage = new AuthStorage()
     const modelRegistry = new ModelRegistry(authStorage)
 
-    const settingsManager = packageSources.length > 0
-      ? (await import('@mariozechner/pi-coding-agent')).SettingsManager.inMemory({ packages: packageSources })
-      : undefined
-
     const loader = new DefaultResourceLoader({
       cwd,
-      ...(settingsManager ? { settingsManager } : {}),
-      additionalExtensionPaths: [sparkExtensionPath, ...localPaths],
+      noExtensions: true,
+      extensionFactories: [sparkFactory, ...localFactories],
     })
     await loader.reload()
 
