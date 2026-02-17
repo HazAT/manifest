@@ -8,18 +8,8 @@ export const meta = [
     usage: 'bun manifest spark init',
   },
   {
-    name: 'spark pause',
-    description: 'Pause Spark event processing (use when making changes)',
-    usage: 'bun manifest spark pause [reason]',
-  },
-  {
-    name: 'spark resume',
-    description: 'Resume Spark event processing',
-    usage: 'bun manifest spark resume',
-  },
-  {
     name: 'spark status',
-    description: 'Show current Spark status (enabled, environment, paused, events)',
+    description: 'Show current Spark status (enabled, environment, events, DB)',
     usage: 'bun manifest spark status',
   },
 ]
@@ -41,13 +31,32 @@ export default {
   // Current environment — controls tool access and behavior mode
   environment: (Bun.env.SPARK_ENV || Bun.env.NODE_ENV || 'development') as string,
 
-  // Directory where event files are written (relative to project root)
-  eventsDir: '.spark/events',
+  // SQLite database configuration
+  db: {
+    // Path to the SQLite database file (relative to project root)
+    path: '.spark/spark.db',
+
+    // How often the Pi extension polls for new events (ms)
+    pollIntervalMs: 1000,
+
+    // Automatic cleanup settings
+    cleanup: {
+      // Delete consumed events and access logs older than this
+      maxAgeDays: 7,
+
+      // Trigger aggressive pruning when DB file exceeds this size
+      maxSizeMB: 100,
+
+      // How often the cleanup job runs (ms) — default 5 minutes
+      intervalMs: 300_000,
+    },
+  },
 
   // Which event types to capture and emit
   watch: {
     unhandledErrors: true,
     serverErrors: true,
+    processErrors: true,
   },
 
   // Per-environment behavior profiles
@@ -57,19 +66,20 @@ export default {
       behavior: 'fix' as const,   // Investigate and apply fixes
     },
     production: {
-      tools: 'readonly' as const, // Read-only tools only
-      behavior: 'alert' as const, // Report issues, don't modify code
+      tools: 'full' as const,     // Full tools — Spark is trusted to act responsibly
+      behavior: 'fix' as const,   // Investigate and apply fixes, with extreme care
     },
   },
 
-  // Pause protocol — stale pause files older than this trigger doctor mode
-  pause: {
-    staleThresholdMinutes: 30,
-  },
-
-  // Event debouncing — batch rapid events within this window
-  debounce: {
-    windowMs: 1000,
+  // Spark Web UI — opt-in browser dashboard for interacting with Spark.
+  // Runs as a separate sidecar process that survives main server crashes.
+  // Start it explicitly: SPARK_WEB_TOKEN=xxx bun extensions/spark-web/services/sparkWeb.ts
+  // Open:  http://localhost:8081/
+  web: {
+    enabled: false,
+    port: Number(Bun.env.SPARK_WEB_PORT) || 8081,
+    token: Bun.env.SPARK_WEB_TOKEN || '',
+    extensions: [] as string[],
   },
 }
 `
@@ -161,30 +171,16 @@ export async function sparkInit(_args: string[]): Promise<void> {
     2. Start Spark:          ${piCmd}
     3. Spark will auto-load and watch for events
 
-  Verify it works: trigger a 500 error, then check .spark/events/
+  Verify it works: trigger a 500 error, then check spark status:
+    bun manifest spark status
   Full docs: extensions/spark/EXTENSION.md
 `)
 }
 
-/** Pause Spark with an optional reason. */
-export async function sparkPause(args: string[]): Promise<void> {
-  const reason = args.join(' ') || 'Paused via CLI'
-  const { spark } = await import('../../extensions/spark/services/spark')
-  await spark.pause(reason, 'cli')
-  console.log(`⏸ Spark paused: ${reason}`)
-}
-
-/** Resume Spark event processing. */
-export async function sparkResume(_args: string[]): Promise<void> {
-  const { spark } = await import('../../extensions/spark/services/spark')
-  await spark.resume()
-  console.log('▶ Spark resumed')
-}
-
 /** Show current Spark status. */
 export async function sparkStatus(_args: string[]): Promise<void> {
-  const { spark } = await import('../../extensions/spark/services/spark')
-  const status = await spark.status()
+  const { default: sparkConfig } = await import('../../config/spark')
+  const { sparkDb } = await import('../../services/sparkDb')
 
   // Check if Pi extension is registered
   let piExtensionInstalled = false
@@ -194,11 +190,33 @@ export async function sparkStatus(_args: string[]): Promise<void> {
     piExtensionInstalled = Array.isArray(settings.extensions) && settings.extensions.includes(SPARK_EXTENSION_REF)
   } catch {}
 
+  // Query DB stats
+  const oneHourAgo = new Date(Date.now() - 3600000).toISOString()
+  const db = sparkDb.db
+
+  const pendingEvents = (db.prepare('SELECT COUNT(*) as count FROM events WHERE consumed = 0').get() as { count: number }).count
+  const recentErrors = (db.prepare('SELECT COUNT(*) as count FROM events WHERE timestamp >= ?').get(oneHourAgo) as { count: number }).count
+  const recentAccess = (db.prepare('SELECT COUNT(*) as count FROM access_logs WHERE timestamp >= ?').get(oneHourAgo) as { count: number }).count
+
+  // DB file size
+  let dbSize = 'unknown'
+  try {
+    const { statSync } = await import('fs')
+    const stats = statSync(sparkConfig.db.path)
+    const kb = stats.size / 1024
+    dbSize = kb < 1024 ? `${kb.toFixed(0)} KB` : `${(kb / 1024).toFixed(1)} MB`
+  } catch {
+    dbSize = 'not found'
+  }
+
   console.log('\n⚡ Spark Status\n')
-  console.log(`  Enabled:          ${status.enabled ? 'yes' : 'no'}`)
-  console.log(`  Environment:      ${status.environment}`)
-  console.log(`  Paused:           ${status.paused ? `yes — ${status.pauseInfo?.reason || 'no reason'}` : 'no'}`)
-  console.log(`  Pending events:   ${status.pendingEvents}`)
-  console.log(`  Pi extension:     ${piExtensionInstalled ? 'registered' : 'not registered (run: bun manifest spark init)'}`)
+  console.log(`  Enabled:            ${sparkConfig.enabled ? 'yes' : 'no'}`)
+  console.log(`  Environment:        ${sparkConfig.environment}`)
+  console.log(`  Pending events:     ${pendingEvents}`)
+  console.log(`  Errors (last hour): ${recentErrors}`)
+  console.log(`  Access (last hour): ${recentAccess}`)
+  console.log(`  DB size:            ${dbSize}`)
+  console.log(`  DB path:            ${sparkConfig.db.path}`)
+  console.log(`  Pi extension:       ${piExtensionInstalled ? 'registered' : 'not registered (run: bun manifest spark init)'}`)
   console.log()
 }

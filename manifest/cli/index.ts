@@ -144,16 +144,6 @@ switch (command) {
         await sparkInit(args.slice(2))
         break
       }
-      case 'pause': {
-        const { sparkPause } = await import('./spark')
-        await sparkPause(args.slice(2))
-        break
-      }
-      case 'resume': {
-        const { sparkResume } = await import('./spark')
-        await sparkResume(args.slice(2))
-        break
-      }
       case 'status': {
         const { sparkStatus } = await import('./spark')
         await sparkStatus(args.slice(2))
@@ -162,7 +152,7 @@ switch (command) {
       default:
         console.error(subcommand
           ? `Unknown spark subcommand: ${subcommand}`
-          : 'Missing subcommand. Usage: bun manifest spark init|pause|resume|status')
+          : 'Missing subcommand. Usage: bun manifest spark init|status')
         process.exit(1)
     }
     break
