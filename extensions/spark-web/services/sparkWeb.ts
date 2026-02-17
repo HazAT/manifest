@@ -186,55 +186,6 @@ export async function startSparkSidecar(config: SparkSidecarConfig): Promise<voi
   // Connected WebSocket clients
   const clients = new Set<WebSocketClient>()
 
-  // Pause state
-  const sparkDir = path.resolve(config.projectDir, '.spark')
-  const pauseFile = path.join(sparkDir, 'pause')
-
-  type PauseState = { paused: false } | { paused: true; by: string; since: string; reason: string }
-  let currentPauseState: PauseState = { paused: false }
-
-  async function readPauseState(): Promise<PauseState> {
-    try {
-      const raw = fs.readFileSync(pauseFile, 'utf-8')
-      const info = JSON.parse(raw)
-      return { paused: true, by: info.by || 'unknown', since: info.since, reason: info.reason }
-    } catch {
-      return { paused: false }
-    }
-  }
-
-  async function writePause(reason: string, by: string): Promise<void> {
-    const dir = path.dirname(pauseFile)
-    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-    fs.writeFileSync(pauseFile, JSON.stringify({ by, since: new Date().toISOString(), reason }, null, 2))
-  }
-
-  async function clearPause(): Promise<void> {
-    try { fs.unlinkSync(pauseFile) } catch {}
-  }
-
-  function broadcastPauseState(state: PauseState) {
-    broadcast({ type: 'pause_state', ...state })
-  }
-
-  // Watch .spark/ for pause file changes (from CLI or other agents)
-  let pauseWatcher: ReturnType<typeof fs.watch> | undefined
-  try {
-    if (!fs.existsSync(sparkDir)) fs.mkdirSync(sparkDir, { recursive: true })
-    pauseWatcher = fs.watch(sparkDir, async (_eventType, filename) => {
-      if (filename !== 'pause') return
-      const newState = await readPauseState()
-      if (newState.paused !== currentPauseState.paused ||
-          (newState.paused && currentPauseState.paused && newState.reason !== currentPauseState.reason)) {
-        currentPauseState = newState
-        broadcastPauseState(currentPauseState)
-      }
-    })
-  } catch {}
-
-  // Read initial pause state
-  currentPauseState = await readPauseState()
-
   function broadcast(data: Record<string, unknown>) {
     const json = JSON.stringify(data)
     for (const client of clients) {
@@ -480,7 +431,6 @@ export async function startSparkSidecar(config: SparkSidecarConfig): Promise<voi
           }
           try {
             ws.send(JSON.stringify({ type: 'state', data: stateData }))
-            ws.send(JSON.stringify({ type: 'pause_state', ...currentPauseState }))
           } catch {}
 
           // Send message history
@@ -510,20 +460,7 @@ export async function startSparkSidecar(config: SparkSidecarConfig): Promise<voi
             return
           }
 
-          if (parsed.type === 'pause') {
-            const reason = parsed.reason || 'Paused from web UI'
-            writePause(reason, 'spark-web').then(() => {
-              currentPauseState = { paused: true, by: 'spark-web', since: new Date().toISOString(), reason }
-              broadcastPauseState(currentPauseState)
-            })
-            return
-          } else if (parsed.type === 'resume') {
-            clearPause().then(() => {
-              currentPauseState = { paused: false }
-              broadcastPauseState(currentPauseState)
-            })
-            return
-          } else if (parsed.type === 'prompt' && typeof parsed.message === 'string') {
+          if (parsed.type === 'prompt' && typeof parsed.message === 'string') {
             const doPrompt = async () => {
               try {
                 if (session.isStreaming) {

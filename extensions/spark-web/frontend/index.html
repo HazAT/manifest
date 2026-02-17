@@ -186,84 +186,6 @@
   }
   .logout-btn:hover { border-color: #333; color: #888; }
 
-  /* Pause button */
-  .pause-btn {
-    background: none;
-    border: 1px solid #1a1a1a;
-    color: #555;
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 11px;
-    padding: 2px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-  }
-  .pause-btn:hover { border-color: #ffb000; color: #ffb000; }
-  .pause-btn.is-paused {
-    border-color: rgba(239, 68, 68, 0.4);
-    color: #ef4444;
-    background: rgba(239, 68, 68, 0.06);
-  }
-  .pause-btn.is-paused:hover { border-color: #22c55e; color: #22c55e; background: rgba(34, 197, 94, 0.06); }
-
-  /* Pause banner */
-  @keyframes pause-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-  }
-
-  .pause-banner {
-    display: none;
-    align-items: center;
-    gap: 10px;
-    padding: 8px 16px;
-    background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, rgba(239, 68, 68, 0.03) 100%);
-    border-bottom: 1px solid rgba(239, 68, 68, 0.15);
-    font-size: 12px;
-    flex-shrink: 0;
-  }
-
-  .pause-banner.visible { display: flex; }
-
-  .pause-banner .pause-icon {
-    color: #ef4444;
-    font-size: 14px;
-    animation: pause-pulse 2s ease-in-out infinite;
-  }
-
-  .pause-banner .pause-text {
-    color: #888;
-    flex: 1;
-  }
-
-  .pause-banner .pause-text .pause-reason {
-    color: #ef4444;
-    font-weight: 500;
-  }
-
-  .pause-banner .pause-text .pause-by {
-    color: #555;
-    font-size: 11px;
-    margin-left: 6px;
-  }
-
-  .pause-banner .pause-resume-btn {
-    background: none;
-    border: 1px solid rgba(34, 197, 94, 0.3);
-    color: #22c55e;
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 11px;
-    padding: 2px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-  .pause-banner .pause-resume-btn:hover { border-color: #22c55e; background: rgba(34, 197, 94, 0.1); }
-
   /* Messages area */
   #messages {
     flex: 1;
@@ -729,15 +651,8 @@
       <span>working</span>
     </div>
     <div class="spacer"></div>
-    <button class="pause-btn" id="pause-btn" title="Pause Spark">⏸ pause</button>
     <div class="status-dot disconnected" id="status-dot" title="Disconnected"></div>
     <form method="POST" action="/logout" style="margin:0"><button type="submit" class="logout-btn">logout</button></form>
-  </div>
-
-  <div class="pause-banner" id="pause-banner">
-    <span class="pause-icon">⏸</span>
-    <span class="pause-text" id="pause-text"></span>
-    <button class="pause-resume-btn" id="pause-resume-btn">▶ resume</button>
   </div>
 
   <div id="messages"></div>
@@ -770,13 +685,6 @@
   const envBadge = document.getElementById('env-badge');
   const modeBadge = document.getElementById('mode-badge');
   const streamingInd = document.getElementById('streaming-ind');
-  const pauseBtn = document.getElementById('pause-btn');
-  const pauseBanner = document.getElementById('pause-banner');
-  const pauseText = document.getElementById('pause-text');
-  const pauseResumeBtn = document.getElementById('pause-resume-btn');
-
-  let isPausedState = false;
-
   let currentAssistantEl = null;
   let currentThinkingEl = null;
   let currentToolCalls = {};
@@ -895,38 +803,9 @@
       case 'agent_end':
         setStreaming(false);
         break;
-      case 'pause_state':
-        handlePauseState(data);
-        break;
       case 'error':
         appendError('Error', data.message);
         break;
-    }
-  }
-
-  function handlePauseState(data) {
-    isPausedState = data.paused;
-    if (data.paused) {
-      pauseBtn.textContent = '▶ resume';
-      pauseBtn.classList.add('is-paused');
-      pauseBtn.title = 'Resume Spark';
-
-      var text = '<span class="pause-reason">' + escapeHtml(data.reason || 'Paused') + '</span>';
-      if (data.by) text += '<span class="pause-by">by ' + escapeHtml(data.by) + '</span>';
-      if (data.since) {
-        try {
-          var d = new Date(data.since);
-          var timeStr = d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-          text += '<span class="pause-by"> at ' + timeStr + '</span>';
-        } catch (e) {}
-      }
-      pauseText.innerHTML = text;
-      pauseBanner.classList.add('visible');
-    } else {
-      pauseBtn.textContent = '⏸ pause';
-      pauseBtn.classList.remove('is-paused');
-      pauseBtn.title = 'Pause Spark';
-      pauseBanner.classList.remove('visible');
     }
   }
 
@@ -1207,19 +1086,6 @@
 
   stopBtn.addEventListener('click', function() {
     if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'abort' }));
-  });
-
-  pauseBtn.addEventListener('click', function() {
-    if (!ws || ws.readyState !== 1) return;
-    if (isPausedState) {
-      ws.send(JSON.stringify({ type: 'resume' }));
-    } else {
-      ws.send(JSON.stringify({ type: 'pause', reason: 'Paused from dashboard' }));
-    }
-  });
-
-  pauseResumeBtn.addEventListener('click', function() {
-    if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'resume' }));
   });
 
   function sendMessage() {
