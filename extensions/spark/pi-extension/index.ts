@@ -209,8 +209,17 @@ When you start a session, proactively orient yourself before waiting for events:
 This takes a moment but means you can act on errors with full context instead of flying blind. You're not just a watcher — you're an engineer who knows the codebase.
 `
 
+    let fullPrompt = sparkPrompt.trim()
+
+    // Append DB knowledge prompt if available
+    const promptPath = path.resolve(ctx.cwd, 'extensions/spark/SPARK_PROMPT.md')
+    try {
+      const sparkDbPrompt = await Bun.file(promptPath).text()
+      fullPrompt += '\n\n' + sparkDbPrompt.trim()
+    } catch {}
+
     return {
-      systemPrompt: event.systemPrompt + '\n' + sparkPrompt.trim(),
+      systemPrompt: event.systemPrompt + '\n' + fullPrompt,
     }
   })
 
