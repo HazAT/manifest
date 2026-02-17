@@ -656,6 +656,64 @@
     color: #ff6b6b;
   }
 
+  /* Queued messages */
+  #queued-messages:empty { display: none; }
+
+  #queued-messages {
+    flex-shrink: 0;
+    padding: 0 16px;
+    background: #000;
+    border-top: 1px solid #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .queued-msg {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #0a0a0a;
+    border: 1px solid #1a1a1a;
+    border-radius: 4px;
+    align-self: flex-end;
+    max-width: 80%;
+    animation: queued-fade-in 0.2s ease-out;
+  }
+
+  @keyframes queued-fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .queued-msg .queued-text {
+    flex: 1;
+    color: #888;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  .queued-msg .queued-badge {
+    flex-shrink: 0;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 7px;
+    border-radius: 3px;
+    background: rgba(255, 176, 0, 0.08);
+    color: #ffb000;
+    border: 1px solid rgba(255, 176, 0, 0.2);
+    white-space: nowrap;
+    animation: queued-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes queued-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
   #main-ui { display: flex; flex-direction: column; flex: 1; overflow: hidden; }
 </style>
 </head>
@@ -683,6 +741,8 @@
   </div>
 
   <div id="messages"></div>
+
+  <div id="queued-messages"></div>
 
   <div id="input-bar">
     <textarea id="msg-input" rows="1" placeholder="Message Spark..." disabled></textarea>
@@ -722,6 +782,12 @@
   let currentToolCalls = {};
   let streamingToolCall = null;
 
+  // Track messages sent by this client.
+  // Non-queued: rendered immediately in chat, echo suppressed.
+  // Queued (sent while agent is streaming): shown in queued area, moved to chat on echo.
+  let localSentMessages = [];  // { text, queued, el? }
+  const queuedContainer = document.getElementById('queued-messages');
+
   connect();
 
   function connect() {
@@ -748,6 +814,8 @@
     ws.onclose = function() {
       isConnected = false;
       sessionReady = false;
+      localSentMessages = [];
+      queuedContainer.innerHTML = '';
       setConnectionStatus('disconnected');
       updateInputState();
       clearTimeout(reconnectTimer);
@@ -787,7 +855,21 @@
           streamingToolCall = null;
         } else if (data.message && data.message.role === 'user') {
           var userText = typeof data.message.content === 'string' ? data.message.content : (Array.isArray(data.message.content) ? data.message.content.map(function(b) { return b.text || ''; }).join('') : '');
-          if (userText.trim()) appendUserOrSparkEvent(userText);
+          if (userText.trim()) {
+            // Check if this is an echo of a message we sent locally
+            var idx = localSentMessages.findIndex(function(m) { return m.text === userText; });
+            if (idx !== -1) {
+              var entry = localSentMessages.splice(idx, 1)[0];
+              if (entry.queued && entry.el) {
+                // Was queued — remove from queue area and render in chat
+                entry.el.remove();
+                appendUser(userText);
+              }
+              // Non-queued messages were already rendered — just consume the echo
+            } else {
+              appendUserOrSparkEvent(userText);
+            }
+          }
         }
         break;
       case 'message_update':
@@ -1060,6 +1142,20 @@
     autoScroll();
   }
 
+  function createQueuedMessageEl(text) {
+    var el = document.createElement('div');
+    el.className = 'queued-msg';
+    var textSpan = document.createElement('span');
+    textSpan.className = 'queued-text';
+    textSpan.textContent = text;
+    var badge = document.createElement('span');
+    badge.className = 'queued-badge';
+    badge.textContent = 'queued';
+    el.appendChild(textSpan);
+    el.appendChild(badge);
+    return el;
+  }
+
   function appendSystem(text) {
     const el = document.createElement('div');
     el.className = 'msg msg-system';
@@ -1130,7 +1226,20 @@
     const text = msgInput.value.trim();
     if (!text || !ws || ws.readyState !== 1) return;
     ws.send(JSON.stringify({ type: 'prompt', message: text }));
-    appendUser(text);
+
+    if (isStreaming) {
+      // Agent is busy — this will be queued via session.followUp().
+      // Show in the queued area instead of the main chat.
+      var entry = { text: text, queued: true, el: null };
+      entry.el = createQueuedMessageEl(text);
+      queuedContainer.appendChild(entry.el);
+      localSentMessages.push(entry);
+    } else {
+      // Agent is free — render immediately in the chat.
+      appendUser(text);
+      localSentMessages.push({ text: text, queued: false });
+    }
+
     msgInput.value = '';
     msgInput.style.height = 'auto';
   }
