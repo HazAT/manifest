@@ -11,6 +11,8 @@
 import { scanAllFeatures } from '../scanner'
 import path from 'path'
 import { existsSync, readdirSync, readFileSync, statSync } from 'fs'
+import { sparkDb } from '../../services/sparkDb'
+import sparkConfig from '../../config/spark'
 
 export const meta = {
   name: 'status',
@@ -161,34 +163,29 @@ export async function status(_args: string[]): Promise<number> {
   } catch {}
 
   // ── Spark status ──
-  const sparkConfigPath = path.join(projectDir, 'config/spark.ts')
-  if (existsSync(sparkConfigPath)) {
-    const pausePath = path.join(projectDir, '.spark', 'pause')
-    const eventsDir = path.join(projectDir, '.spark', 'events')
+  if (sparkConfig.enabled) {
+    try {
+      const dbPath = sparkConfig.db.path
+      const unconsumedCount = sparkDb.db.prepare('SELECT COUNT(*) as cnt FROM events WHERE consumed = 0').get() as { cnt: number }
+      const oneHourAgo = new Date(Date.now() - 3600000).toISOString()
+      const recentErrorCount = sparkDb.db.prepare('SELECT COUNT(*) as cnt FROM events WHERE timestamp >= ?').get(oneHourAgo) as { cnt: number }
 
-    let pendingEvents = 0
-    if (existsSync(eventsDir)) {
-      try {
-        pendingEvents = readdirSync(eventsDir).filter(f => f.endsWith('.json')).length
-      } catch {}
-    }
-
-    const paused = existsSync(pausePath)
-
-    if (paused) {
-      try {
-        const pauseContent = readFileSync(pausePath, 'utf-8')
-        const pauseData = JSON.parse(pauseContent)
-        warnings.push(`Spark is paused: ${pauseData.reason || 'no reason'}`)
-      } catch {
-        warnings.push('Spark is paused')
-      }
-    } else {
       console.log('  \x1b[32m✓\x1b[0m Spark active')
-    }
 
-    if (pendingEvents > 0) {
-      warnings.push(`${pendingEvents} pending Spark event(s) in .spark/events/`)
+      if (unconsumedCount.cnt > 0) {
+        warnings.push(`${unconsumedCount.cnt} unconsumed Spark event(s)`)
+      }
+      if (recentErrorCount.cnt > 0) {
+        info.push(`${recentErrorCount.cnt} Spark event(s) in the last hour`)
+      }
+
+      try {
+        const stats = statSync(dbPath)
+        const sizeMB = (stats.size / (1024 * 1024)).toFixed(1)
+        info.push(`Spark DB size: ${sizeMB} MB`)
+      } catch {}
+    } catch {
+      warnings.push('Spark enabled but DB not accessible')
     }
   }
 

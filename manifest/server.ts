@@ -283,6 +283,19 @@ export async function createManifestServer(options: ManifestServerOptions) {
             },
           })
 
+          // Log access for stream features (time-to-first-byte, status 200)
+          if (sparkEnabled) {
+            try {
+              const streamDurationMs = Math.round((performance.now() - start) * 100) / 100
+              sparkDb.logAccess({
+                timestamp: new Date().toISOString(), method, path: pathname, status: 200,
+                duration_ms: streamDurationMs, ip: server.requestIP(req)?.address ?? undefined,
+                feature: feature.name, request_id: requestId, input: JSON.stringify(input),
+                user_agent: req.headers.get('user-agent') ?? undefined,
+              })
+            } catch {}
+          }
+
           return new Response(stream, {
             headers: {
               'Content-Type': 'text/event-stream',

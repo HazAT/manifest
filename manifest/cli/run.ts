@@ -123,7 +123,7 @@ export async function runProcess(
         const tail = buffer.slice(-TAIL_LINES).join('\n')
         sparkDb.logEvent({
           type: 'process-error',
-          traceId: crypto.randomUUID(),
+          traceId: Bun.randomUUIDv7(),
           command: command.join(' '),
           exitCode,
           logFile,

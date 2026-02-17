@@ -315,8 +315,8 @@ export const sparkDb = {
     const maxSizeMB = sparkConfig.db.cleanup.maxSizeMB
 
     const cutoff = new Date(Date.now() - maxAgeDays * 86400000).toISOString()
-    db.exec(`DELETE FROM events WHERE consumed = 1 AND timestamp < '${cutoff}'`)
-    db.exec(`DELETE FROM access_logs WHERE timestamp < '${cutoff}'`)
+    db.prepare(`DELETE FROM events WHERE consumed = 1 AND timestamp < $cutoff`).run({ $cutoff: cutoff })
+    db.prepare(`DELETE FROM access_logs WHERE timestamp < $cutoff`).run({ $cutoff: cutoff })
 
     // Check file size for aggressive pruning
     try {
@@ -325,8 +325,8 @@ export const sparkDb = {
       if (sizeMB > maxSizeMB) {
         const aggressiveEventCutoff = new Date(Date.now() - 3600000).toISOString() // 1h
         const aggressiveAccessCutoff = new Date(Date.now() - 86400000).toISOString() // 24h
-        db.exec(`DELETE FROM events WHERE consumed = 1 AND timestamp < '${aggressiveEventCutoff}'`)
-        db.exec(`DELETE FROM access_logs WHERE timestamp < '${aggressiveAccessCutoff}'`)
+        db.prepare(`DELETE FROM events WHERE consumed = 1 AND timestamp < $cutoff`).run({ $cutoff: aggressiveEventCutoff })
+        db.prepare(`DELETE FROM access_logs WHERE timestamp < $cutoff`).run({ $cutoff: aggressiveAccessCutoff })
         db.exec('VACUUM')
       }
     } catch {}

@@ -32,7 +32,7 @@ Manifest ships with **Spark**, a reactive AI sidekick that watches your running 
 
 **Commands are agent prompts.** Manifest CLI commands don't silently generate files — they output structured prompts that tell the agent exactly what to do. Scaffolding commands (`manifest feature make`, `manifest extension make`, `manifest extension install`) produce pure prompts: pre-context, instructions, and actionable steps. The agent reads the prompt and does the work. Work commands (`check`, `index`, `learn`) do their job but frame output as agent instructions — telling you what to fix, update, or verify. Commands may reference skills for deeper context. The CLI is the briefing; the agent is the executor.
 
-**Your app watches itself.** Manifest applications are designed to be observed by AI. The Spark sidekick runs alongside your app — when a feature throws a 500, when an unhandled exception crashes a process, Spark captures the error with full context (stack trace, feature name, route, trace ID, request input) and delivers it to a Pi agent session. In both development and production, Spark investigates and fixes issues — with full tool access. In production it acts with extra care: smallest surgical fix, no refactoring, transparent about every change. This isn't bolted on — it's baked into the server, the response envelope, and the framework's error handling. Every `request_id` in a response envelope doubles as a trace ID that Spark uses to connect errors back to requests. Spark runs as a web sidecar process with a browser dashboard on port 8081, watching your app and fixing issues autonomously. Build with the assumption that an agent is always watching.
+**Your app watches itself.** Manifest applications are designed to be observed by AI. The Spark sidekick runs alongside your app — when a feature throws a 500, when an unhandled exception crashes a process, Spark captures the error with full context (stack trace, feature name, route, trace ID, request input) and stores it in a SQLite database. A Pi extension polls the database and injects events into the agent's conversation. In both development and production, Spark investigates and fixes issues — with full tool access. In production it acts with extra care: smallest surgical fix, no refactoring, transparent about every change. This isn't bolted on — it's baked into the server, the response envelope, and the framework's error handling. Every `request_id` in a response envelope doubles as a trace ID that Spark uses to connect errors back to requests. Spark runs as a web sidecar process with a browser dashboard on port 8081, watching your app and fixing issues autonomously. Build with the assumption that an agent is always watching.
 
 **Share what works.** When you build something that could be useful to other Manifest projects, suggest packaging it as an extension. Extensions are how the Manifest ecosystem shares knowledge and working solutions.
 
@@ -81,16 +81,15 @@ To update the framework from upstream, load the `manifest-update` skill. To cont
 ├── policies/           # Authorization. One file per resource.
 ├── commands/           # CLI commands.
 ├── config/             # Typed config files. No YAML, no .env magic.
-│   └── spark.ts        # Spark sidekick config: environment, events, behavior.
+│   └── spark.ts        # Spark sidekick config: environment, DB, behavior.
 ├── extensions/         # Manifest extensions (each has EXTENSION.md).
-│   └── spark/          # The Spark sidekick. Event bus + Pi extension.
+│   └── spark/          # The Spark sidekick. Pi extension that polls SQLite for events.
 │   └── spark-web/      # Spark web sidecar — browser dashboard with embedded Pi agent.
 ├── .pi/                # Pi agent configuration for this project.
 │   └── settings.json   # Points Pi to the Spark extension.
 ├── .spark/             # Runtime artifacts (gitignored).
-│   ├── events/         # Event files — the bus between your app and Spark.
-│   ├── agents/         # Agent presence files — tracks active Pi sessions.
-│   └── pause           # Pause file — signals "I'm working, back off."
+│   ├── spark.db        # SQLite database — events, access logs, all Spark state.
+│   └── logs/           # Process runner output logs.
 ├── tests/              # Mirrors features/ 1:1.
 └── index.ts            # Entry point.
 ```
@@ -361,8 +360,6 @@ bun manifest run dev                      # Sugar for: bun --hot index.ts
 # Spark sidekick
 bun manifest spark init                   # Set up Spark (config + Pi extension)
 bun manifest spark status                 # Show Spark state
-bun manifest spark pause "reason"         # Tell Spark to back off
-bun manifest spark resume                 # Let Spark process events again
 ```
 
 ### Spark Commands
@@ -383,7 +380,7 @@ SPARK_WEB_TOKEN=your-token bun extensions/spark-web/services/sparkWeb.ts
 2. Start the sidecar with the command above
 3. Open `http://localhost:8081/` — you'll see a login prompt where you enter your token
 
-The sidecar runs as a separate process on its own port — it watches `.spark/events/`, runs a health assessment on startup, and begins responding to errors from your running app. **It survives main server crashes**, so you can still talk to Spark and investigate what happened even if your app goes down. Authentication uses HttpOnly cookies — enter your token once at the login prompt and you're in for the session. You can load additional local extensions into the Spark agent via the `web.extensions` config array in `config/spark.ts`. See `extensions/spark-web/EXTENSION.md` for full docs.
+The sidecar runs as a separate process on its own port — it polls the SQLite database for new events, runs a health assessment on startup, and begins responding to errors from your running app. **It survives main server crashes**, so you can still talk to Spark and investigate what happened even if your app goes down. Authentication uses HttpOnly cookies — enter your token once at the login prompt and you're in for the session. You can load additional local extensions into the Spark agent via the `web.extensions` config array in `config/spark.ts`. See `extensions/spark-web/EXTENSION.md` for full docs.
 
 For human interactive Pi sessions (not Spark), use `bunx pi` — it loads the Spark extension via `.pi/settings.json` and works as a full coding agent that also reacts to app errors. Read `extensions/spark/EXTENSION.md` for details.
 
@@ -512,7 +509,7 @@ Spark is what makes Manifest applications self-aware. It's not a separate tool y
 
 ### How It Works
 
-Your Manifest server captures errors (500 responses, unhandled exceptions) and rate-limit violations and writes them as JSON event files to `.spark/events/`. A Pi extension watches that directory and injects events into the agent's conversation. The connection is a plain directory of files — no sockets, no message queues, no dependencies.
+Your Manifest server captures errors (500 responses, unhandled exceptions) and rate-limit violations and stores them in a SQLite database at `.spark/spark.db`. A Pi extension polls the database for unconsumed events and injects them into the agent's conversation. The database also stores HTTP access logs for observability.
 
 The Spark web sidecar runs as a separate Bun process on its own port with the Pi SDK and Spark extension loaded. It survives main server crashes, so Spark can investigate even when your app is down.
 
@@ -525,23 +522,9 @@ The Spark web sidecar runs as a separate Bun process on its own port with the Pi
 
 Configure in `config/spark.ts`. The environment resolves from `SPARK_ENV` → `NODE_ENV` → `'development'`. The config also includes a `web` block for the sidecar dashboard (`web.enabled`, `web.port`, `web.token`).
 
-### Pause/Resume Protocol
-
-When you (or another agent) are actively making changes, tell Spark to hold off:
-
-```bash
-bun run manifest spark pause "refactoring auth flow"
-# ... make changes ...
-bun run manifest spark resume
-```
-
-While paused, Spark buffers events but doesn't act on them. When resumed, it reviews buffered events and acts on anything still relevant. If a pause goes stale (>30 minutes), Spark clears it on next startup and runs a doctor check to assess the damage.
-
-**This matters for multi-agent workflows.** If you're using Claude Code, Cursor, or any other agent alongside Spark, have that agent run `spark pause` before making changes. This prevents Spark from reacting to transient errors caused by in-progress work.
-
 ### Trace IDs
 
-Every event carries a `traceId` that links back to the original request. For server errors, this is the same `request_id` from the response envelope — the ID the client sees. For unhandled errors, Spark generates a standalone trace ID. Follow the trace from client response → event file → agent investigation.
+Every event carries a `traceId` that links back to the original request. For server errors, this is the same `request_id` from the response envelope — the ID the client sees. For unhandled errors, Spark generates a standalone trace ID. Follow the trace from client response → database event → agent investigation.
 
 ## When In Doubt
 
