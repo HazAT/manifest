@@ -10,8 +10,26 @@ export default {
   // Current environment — controls tool access and behavior mode
   environment: (Bun.env.SPARK_ENV || Bun.env.NODE_ENV || 'development') as string,
 
-  // Directory where event files are written (relative to project root)
-  eventsDir: '.spark/events',
+  // SQLite database configuration
+  db: {
+    // Path to the SQLite database file (relative to project root)
+    path: '.spark/spark.db',
+
+    // How often the Pi extension polls for new events (ms)
+    pollIntervalMs: 1000,
+
+    // Automatic cleanup settings
+    cleanup: {
+      // Delete consumed events and access logs older than this
+      maxAgeDays: 7,
+
+      // Trigger aggressive pruning when DB file exceeds this size
+      maxSizeMB: 100,
+
+      // How often the cleanup job runs (ms) — default 5 minutes
+      intervalMs: 300_000,
+    },
+  },
 
   // Which event types to capture and emit
   watch: {
@@ -30,16 +48,6 @@ export default {
       tools: 'full' as const,     // Full tools — Spark is trusted to act responsibly
       behavior: 'fix' as const,   // Investigate and apply fixes, with extreme care
     },
-  },
-
-  // Pause protocol — stale pause files older than this trigger doctor mode
-  pause: {
-    staleThresholdMinutes: 30,
-  },
-
-  // Event debouncing — batch rapid events within this window
-  debounce: {
-    windowMs: 1000,
   },
 
   // Spark Web UI — opt-in browser dashboard for interacting with Spark.
