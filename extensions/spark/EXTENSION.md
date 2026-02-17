@@ -1,10 +1,10 @@
 ---
 name: spark
 version: 0.1.0
-description: "Reactive AI sidekick for Manifest apps. Watches for errors and events, emits them to a file-based bus for consumption by a Pi agent."
+description: "Reactive AI sidekick for Manifest apps. Watches for errors and events, stores them in SQLite for consumption by a Pi agent."
 author: "Manifest"
 services:
-  - spark: "Event emission, pause/resume control, and status reporting."
+  - sparkDb: "SQLite-backed event storage, pause/resume control, and status reporting (in services/sparkDb.ts)."
 config:
   - SPARK_ENV: "Override environment (defaults to NODE_ENV, then 'development')."
   - enabled: "Master switch for Spark event emission. (default: true)"
