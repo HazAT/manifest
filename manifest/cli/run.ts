@@ -103,8 +103,8 @@ export async function runProcess(
   }
 
   await Promise.all([
-    pipeStream(proc.stdout, process.stdout),
-    pipeStream(proc.stderr, process.stderr),
+    pipeStream(proc.stdout as ReadableStream<Uint8Array> | null, process.stdout),
+    pipeStream(proc.stderr as ReadableStream<Uint8Array> | null, process.stderr),
   ])
 
   const exitCode = await proc.exited

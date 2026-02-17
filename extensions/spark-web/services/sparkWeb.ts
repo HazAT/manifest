@@ -54,7 +54,7 @@ function checkAuthRateLimit(ip: string): { allowed: boolean; retryAfter?: number
     authAttempts.set(ip, timestamps)
   }
   if (timestamps.length >= AUTH_RATE_LIMIT) {
-    const oldest = timestamps[0]
+    const oldest = timestamps[0]!
     const retryAfter = Math.ceil((oldest + AUTH_RATE_WINDOW - now) / 1000)
     return { allowed: false, retryAfter }
   }
