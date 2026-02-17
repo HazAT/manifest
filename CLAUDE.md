@@ -32,7 +32,7 @@ Manifest ships with **Spark**, a reactive AI sidekick that watches your running 
 
 **Commands are agent prompts.** Manifest CLI commands don't silently generate files — they output structured prompts that tell the agent exactly what to do. Scaffolding commands (`manifest feature make`, `manifest extension make`, `manifest extension install`) produce pure prompts: pre-context, instructions, and actionable steps. The agent reads the prompt and does the work. Work commands (`check`, `index`, `learn`) do their job but frame output as agent instructions — telling you what to fix, update, or verify. Commands may reference skills for deeper context. The CLI is the briefing; the agent is the executor.
 
-**Your app watches itself.** Manifest applications are designed to be observed by AI. The Spark sidekick runs alongside your app — when a feature throws a 500, when an unhandled exception crashes a process, Spark captures the error with full context (stack trace, feature name, route, trace ID, request input) and delivers it to a Pi agent session. In both development and production, Spark investigates and fixes issues — with full tool access. In production it acts with extra care: smallest surgical fix, no refactoring, transparent about every change. This isn't bolted on — it's baked into the server, the response envelope, and the framework's error handling. Every `request_id` in a response envelope doubles as a trace ID that Spark uses to connect errors back to requests. Spark can run as a standalone terminal agent (`bunx pi`) or as a sidecar process with a browser dashboard on port 8081. Build with the assumption that an agent is always watching.
+**Your app watches itself.** Manifest applications are designed to be observed by AI. The Spark sidekick runs alongside your app — when a feature throws a 500, when an unhandled exception crashes a process, Spark captures the error with full context (stack trace, feature name, route, trace ID, request input) and delivers it to a Pi agent session. In both development and production, Spark investigates and fixes issues — with full tool access. In production it acts with extra care: smallest surgical fix, no refactoring, transparent about every change. This isn't bolted on — it's baked into the server, the response envelope, and the framework's error handling. Every `request_id` in a response envelope doubles as a trace ID that Spark uses to connect errors back to requests. Spark runs as a web sidecar process with a browser dashboard on port 8081, watching your app and fixing issues autonomously. Build with the assumption that an agent is always watching.
 
 **Share what works.** When you build something that could be useful to other Manifest projects, suggest packaging it as an extension. Extensions are how the Manifest ecosystem shares knowledge and working solutions.
 
@@ -84,7 +84,7 @@ To update the framework from upstream, load the `manifest-update` skill. To cont
 │   └── spark.ts        # Spark sidekick config: environment, events, behavior.
 ├── extensions/         # Manifest extensions (each has EXTENSION.md).
 │   └── spark/          # The Spark sidekick. Event bus + Pi extension.
-│   └── spark-web/      # Opt-in browser dashboard for Spark (embeds Pi agent in-process).
+│   └── spark-web/      # Spark web sidecar — browser dashboard with embedded Pi agent.
 ├── .pi/                # Pi agent configuration for this project.
 │   └── settings.json   # Points Pi to the Spark extension.
 ├── .spark/             # Runtime artifacts (gitignored).
@@ -369,29 +369,23 @@ bun manifest spark resume                 # Let Spark process events again
 
 ### Starting Spark
 
-Spark is a [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) agent with the Spark extension loaded. Pi ships as a project dependency.
+Spark runs as a web sidecar process alongside your app. It uses the Pi SDK with the Spark extension loaded, running entirely on Bun.
 
 ```bash
 # Terminal 1: your app
 bun --hot index.ts
 
-# Terminal 2: Spark sidekick
-bunx pi                                   # or just `pi` if installed globally
+# Terminal 2: Spark sidecar
+SPARK_WEB_TOKEN=your-token bun extensions/spark-web/services/sparkWeb.ts
 ```
 
-When Pi starts, Spark auto-loads (via `.pi/settings.json`), runs a health assessment, and begins watching `.spark/events/`. You can type to Pi normally — it's a full coding agent — AND it reacts to errors from your running app.
-
-Read `extensions/spark/EXTENSION.md` for the full guide.
-
-### Spark Web UI (Alternative)
-
-Instead of a second terminal with `bunx pi`, you can run Spark as a sidecar process with a browser-based UI:
-
 1. Enable in `config/spark.ts`: set `web.enabled: true` and `SPARK_WEB_TOKEN`
-2. Start the sidecar: `SPARK_WEB_TOKEN=your-token bun extensions/spark-web/services/sparkWeb.ts`
+2. Start the sidecar with the command above
 3. Open `http://localhost:8081/` — you'll see a login prompt where you enter your token
 
-The sidecar runs as a separate process on its own port — same Spark extension, same error watching, same behavior. **It survives main server crashes**, so you can still talk to Spark and investigate what happened even if your app goes down. Authentication uses HttpOnly cookies — enter your token once at the login prompt and you're in for the session. You can load additional Pi extensions into the Spark agent via the `web.extensions` config array in `config/spark.ts` — supports local paths, npm packages, and git repos. See `extensions/spark-web/EXTENSION.md` for full docs.
+The sidecar runs as a separate process on its own port — it watches `.spark/events/`, runs a health assessment on startup, and begins responding to errors from your running app. **It survives main server crashes**, so you can still talk to Spark and investigate what happened even if your app goes down. Authentication uses HttpOnly cookies — enter your token once at the login prompt and you're in for the session. You can load additional local extensions into the Spark agent via the `web.extensions` config array in `config/spark.ts`. See `extensions/spark-web/EXTENSION.md` for full docs.
+
+For human interactive Pi sessions (not Spark), use `bunx pi` — it loads the Spark extension via `.pi/settings.json` and works as a full coding agent that also reacts to app errors. Read `extensions/spark/EXTENSION.md` for details.
 
 ## The Framework
 
@@ -520,7 +514,7 @@ Spark is what makes Manifest applications self-aware. It's not a separate tool y
 
 Your Manifest server captures errors (500 responses, unhandled exceptions) and rate-limit violations and writes them as JSON event files to `.spark/events/`. A Pi extension watches that directory and injects events into the agent's conversation. The connection is a plain directory of files — no sockets, no message queues, no dependencies.
 
-In **web UI mode** (opt-in), a sidecar process runs on its own port with the Pi SDK and Spark extension loaded. The event watching and error handling work identically — the sidecar survives main server crashes, so Spark can investigate even when your app is down.
+The Spark web sidecar runs as a separate Bun process on its own port with the Pi SDK and Spark extension loaded. It survives main server crashes, so Spark can investigate even when your app is down.
 
 ### Environment Modes
 
@@ -529,7 +523,7 @@ In **web UI mode** (opt-in), a sidecar process runs on its own port with the Pi 
 | `development` | Full (read, write, edit, bash) | **Fix** — investigate and repair | Local dev, active building |
 | `production` | Full (read, write, edit, bash) | **Fix** — investigate and repair, with extreme care | Live systems, production incidents |
 
-Configure in `config/spark.ts`. The environment resolves from `SPARK_ENV` → `NODE_ENV` → `'development'`. The config also includes a `web` block for the opt-in browser dashboard (`web.enabled`, `web.port`, `web.token`).
+Configure in `config/spark.ts`. The environment resolves from `SPARK_ENV` → `NODE_ENV` → `'development'`. The config also includes a `web` block for the sidecar dashboard (`web.enabled`, `web.port`, `web.token`).
 
 ### Pause/Resume Protocol
 

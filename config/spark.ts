@@ -52,13 +52,11 @@ export default {
     token: Bun.env.SPARK_WEB_TOKEN || '',
     // Additional Pi extensions to load into the Spark agent session.
     // The Spark core extension is always included automatically.
-    // Supports local paths, npm packages, and git repos:
+    // Paths are local TypeScript files resolved relative to the project root:
     //
     //   extensions: [
-    //     './extensions/my-custom-tool/index.ts',        // local file
-    //     'npm:@someone/pi-search-tool@1.0.0',           // npm package
-    //     'git:github.com/user/pi-extensions@main',      // git repo
-    //     'https://github.com/user/pi-tools',            // git URL
+    //     './extensions/my-custom-tool/index.ts',
+    //     './extensions/another-ext/pi-extension/index.ts',
     //   ],
     //
     extensions: [] as string[],

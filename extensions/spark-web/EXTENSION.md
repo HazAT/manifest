@@ -13,7 +13,7 @@ config:
 
 # Spark Web
 
-A browser dashboard for the Spark AI sidekick. Instead of running Spark in a terminal via `bunx pi`, this extension runs a **separate sidecar process** on its own port (default 8081) that hosts a Pi agent session with the Spark extension loaded. You get the same Spark experience — error investigation, real-time fixes, conversation history — in a browser tab.
+A browser dashboard for the Spark AI sidekick. This extension runs a **separate sidecar process** on its own port (default 8081) that hosts a Pi agent session with the Spark extension loaded. You get the same Spark experience — error investigation, real-time fixes, conversation history — in a browser tab.
 
 **Key benefit: the sidecar survives main server crashes.** Because it runs as its own process, you can still talk to Spark and investigate what happened even if your app goes down.
 
@@ -95,13 +95,11 @@ Type messages in the input box to interact with Spark. It's a full Pi agent — 
 
 You can load additional Pi extensions into the Spark agent session via the `web.extensions` config array. The Spark core extension (`extensions/spark/pi-extension/index.ts`) is always loaded automatically — you don't need to include it.
 
-Three source types are supported:
+Only **local paths** are supported — each entry is a path to a `.ts` file resolved relative to the project root:
 
 | Type | Example | Resolution |
 |------|---------|------------|
 | Local path | `'./extensions/my-tool/index.ts'` | Resolved relative to project root |
-| npm package | `'npm:@someone/pi-search-tool@1.0.0'` | Installed and loaded via Pi's SettingsManager |
-| Git repo | `'git:github.com/user/pi-extensions@main'` or `'https://github.com/user/pi-tools'` | Cloned and loaded via Pi's SettingsManager |
 
 Example configuration in `config/spark.ts`:
 
@@ -112,8 +110,6 @@ web: {
   token: Bun.env.SPARK_WEB_TOKEN || '',
   extensions: [
     './extensions/my-custom-tool/index.ts',
-    'npm:@someone/pi-search-tool@1.0.0',
-    'https://github.com/user/pi-tools',
   ],
 },
 ```
