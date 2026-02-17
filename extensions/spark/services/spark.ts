@@ -48,7 +48,7 @@ export const spark = {
       environment: event.environment || sparkConfig.environment,
     }
 
-    const filename = `${Date.now()}-${event.type}.json`
+    const filename = `${Date.now()}-${event.type}-${crypto.randomUUID().slice(0, 8)}.json`
     const finalPath = path.join(eventsDir, filename)
     const tmpPath = path.join(eventsDir, `.${filename}.tmp`)
 
