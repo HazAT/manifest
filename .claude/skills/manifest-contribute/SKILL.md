@@ -140,25 +140,70 @@ All three must pass. Fix any issues before proceeding.
 
 ### 8. Push and Open PR
 
-Push the contribution branch to the upstream remote:
+Determine whether you can push directly to the upstream repo or need to fork.
+
+**Check push access:**
+
+```bash
+# Extract owner/repo from the manifest-upstream remote URL
+UPSTREAM_URL=$(git remote get-url manifest-upstream)
+UPSTREAM_REPO=$(echo "$UPSTREAM_URL" | sed -E 's#.+github\.com[:/]([^/]+/[^/.]+)(\.git)?$#\1#')
+
+# Check if the authenticated user has push access
+gh api "repos/$UPSTREAM_REPO" --jq '.permissions.push' 2>/dev/null
+```
+
+**If you have push access** (result is `true`) — push directly:
 
 ```bash
 git push manifest-upstream contribute/<descriptive-name>
 ```
 
-Open a PR using the `github` skill (load it if available):
+Then open the PR:
 
 ```bash
-# Note: --base main targets the UPSTREAM repo's main branch (the framework).
-# This is NOT your local main branch (your app). On GitHub, main = the framework.
-# Locally, main = your app and manifest = the framework mirror.
 gh pr create \
-  --repo HazAT/manifest \
+  --repo "$UPSTREAM_REPO" \
   --base main \
   --head contribute/<descriptive-name> \
   --title "<type>(<scope>): <summary>" \
   --body "<description>"
 ```
+
+**If you do NOT have push access** (result is `false` or the check fails) — fork first:
+
+```bash
+# Fork the upstream repo (idempotent — no-ops if fork already exists)
+gh repo fork "$UPSTREAM_REPO" --clone=false
+
+# Get the authenticated user's GitHub username
+GH_USER=$(gh api user --jq '.login')
+
+# Add the fork as a remote (skip if already exists)
+git remote get-url my-fork 2>/dev/null || git remote add my-fork "https://github.com/$GH_USER/$(basename $UPSTREAM_REPO).git"
+
+# Push to the fork
+git push my-fork contribute/<descriptive-name>
+```
+
+Then open the PR from the fork against the upstream repo:
+
+```bash
+gh pr create \
+  --repo "$UPSTREAM_REPO" \
+  --base main \
+  --head "$GH_USER:contribute/<descriptive-name>" \
+  --title "<type>(<scope>): <summary>" \
+  --body "<description>"
+```
+
+Note the `--head "$GH_USER:contribute/..."` syntax — GitHub needs the fork owner prefix when the PR comes from a fork.
+
+---
+
+**PR guidelines** (apply to both flows):
+
+- `--base main` targets the UPSTREAM repo's main branch (the framework). This is NOT your local `main` branch (your app). On GitHub, `main` = the framework. Locally, `main` = your app and `manifest` = the framework mirror.
 
 The PR title should follow conventional commit format. The body should:
 - Explain **what** was improved and **why**
