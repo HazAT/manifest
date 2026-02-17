@@ -32,7 +32,7 @@ if (!command) {
   for (const cmd of commands) {
     if (['status', 'serve'].includes(cmd.name)) categories['Quick Start']!.push(cmd)
     else if (['check', 'index', 'learn', 'doctor'].includes(cmd.name)) categories['Validation & Diagnostics']!.push(cmd)
-    else if (cmd.name.startsWith('feature') || cmd.name.startsWith('extension')) categories['Scaffolding (Agent Prompts)']!.push(cmd)
+    else if (cmd.name.startsWith('feature') || cmd.name.startsWith('extension') || cmd.name.startsWith('service')) categories['Scaffolding (Agent Prompts)']!.push(cmd)
     else if (cmd.name.startsWith('frontend')) categories['Frontend']!.push(cmd)
     else if (cmd.name === 'run') categories['Process Runner']!.push(cmd)
     else if (cmd.name.startsWith('spark')) categories['Spark Sidekick']!.push(cmd)
@@ -170,6 +170,22 @@ switch (command) {
   case 'run': {
     const { run: runCmd } = await import('./run')
     await runCmd(args.slice(1))
+    break
+  }
+  case 'service': {
+    const subcommand = args[1]
+    switch (subcommand) {
+      case 'make': {
+        const { makeService } = await import('./makeService')
+        await makeService(args.slice(2))
+        break
+      }
+      default:
+        console.error(subcommand
+          ? `Unknown service subcommand: ${subcommand}`
+          : 'Missing subcommand. Usage: bun manifest service make <Name>')
+        process.exit(1)
+    }
     break
   }
   case 'extension': {

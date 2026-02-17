@@ -31,6 +31,7 @@ export function getAllCommandMeta(): CommandMeta[] {
   try { modules.push(require('./learn')) } catch {}
   try { modules.push(require('./doctor')) } catch {}
   try { modules.push(require('./makeFeature')) } catch {}
+  try { modules.push(require('./makeService')) } catch {}
   try { modules.push(require('./extension')) } catch {}
   try { modules.push(require('./frontend')) } catch {}
   try { modules.push(require('./run')) } catch {}
