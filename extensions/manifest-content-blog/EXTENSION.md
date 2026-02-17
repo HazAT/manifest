@@ -5,13 +5,58 @@ description: "Markdown blog with static HTML output. Posts in content/posts/, bu
 author: "Manifest"
 requires:
   - manifest-frontend-static
+services:
+  - posts: "Loads and parses markdown posts from a directory. Returns sorted Post[] with rendered HTML and read times."
+  - rss: "Generates an RSS 2.0 XML feed from a list of posts."
+  - frontmatter: "Parses YAML-style frontmatter from a markdown string."
 ---
 
 # Content Blog Extension
 
-Markdown files in `content/posts/` → static HTML blog. Parses YAML frontmatter, converts to HTML via `marked`, generates index + post pages + about page. Dark/light theme toggle, read time, prev/next navigation, social links.
+Markdown files in `content/posts/` → static HTML blog. Parses YAML frontmatter, converts to HTML via `marked`, generates index + post pages + RSS feed. The extension provides reusable **services** for post loading, RSS generation, and frontmatter parsing — your build script imports these and adds its own templates.
 
 Best for: personal blogs, dev blogs, project blogs — any site where content lives in markdown.
+
+---
+
+## Services
+
+The extension ships three services that your build script imports. These handle the parsing and data plumbing so your build script only needs to define templates and orchestration.
+
+### `posts` — Post loading and parsing
+
+```typescript
+import { loadPosts, type Post } from "../extensions/manifest-content-blog/services/posts"
+
+const posts = loadPosts({ postsDir: "content/posts" })
+```
+
+Reads every `.md` file in the given directory, parses frontmatter, converts markdown to HTML via `marked`, calculates read time (230 words/min), filters out drafts, and returns posts sorted newest-first. Warns on files missing required frontmatter fields (`title`, `slug`, `pubDatetime`).
+
+### `rss` — RSS feed generation
+
+```typescript
+import { generateRss } from "../extensions/manifest-content-blog/services/rss"
+
+const xml = generateRss({
+  posts,
+  siteTitle: "My Blog",
+  siteDescription: "A blog about things.",
+  siteUrl: "https://example.com",
+})
+```
+
+Returns a complete RSS 2.0 XML string. You write it to disk yourself (e.g. `writeFileSync("dist/rss.xml", xml)`).
+
+### `frontmatter` — YAML frontmatter parser
+
+```typescript
+import { parseFrontmatter } from "../extensions/manifest-content-blog/services/frontmatter"
+
+const { data, content } = parseFrontmatter(rawMarkdown)
+```
+
+Low-level utility. Splits a markdown string into a `data` record (key-value pairs from the YAML block) and the remaining `content`. Used internally by `loadPosts` — import directly if you need custom frontmatter handling.
 
 ---
 
@@ -33,14 +78,14 @@ mkdir -p content/posts
 cp extensions/manifest-content-blog/content/posts/hello-world.md content/posts/
 ```
 
-### 3. Copy the build script
+### 3. Copy the build script template
 
 ```bash
 mkdir -p scripts
 cp extensions/manifest-content-blog/templates/build-blog.ts scripts/build-blog.ts
 ```
 
-This is your file now. Edit it to change site title, social links, about text, and page templates.
+This is your file now. It imports `loadPosts` and `generateRss` from the extension's services — those handle all the markdown parsing and RSS generation. The template functions (layout, index page, post page) are inline in the script and yours to customize freely. Edit the `SiteConfig` at the top to set your blog's title, description, URL, and author.
 
 ### 4. Copy the styles template
 
@@ -57,7 +102,7 @@ bun add marked
 bun add -d @tailwindcss/cli @tailwindcss/typography
 ```
 
-- `marked` — markdown to HTML conversion
+- `marked` — markdown to HTML conversion (used by the extension's posts service)
 - `@tailwindcss/cli` — standalone Tailwind CLI (runs after blog build to scan generated HTML)
 - `@tailwindcss/typography` — the `prose` class for styled article content
 
@@ -111,7 +156,7 @@ bun run build
 You should see:
 - `dist/index.html` — the post listing
 - `dist/posts/hello-world/index.html` — the example post
-- `dist/about/index.html` — the about page
+- `dist/rss.xml` — the RSS feed
 - `dist/index.css` — Tailwind CSS with typography styles
 
 ### 9. Start development
@@ -174,7 +219,7 @@ bun run build
 
 ## How the Build Pipeline Works
 
-A single command — `bun manifest frontend build` — runs the entire pipeline:
+The build script imports **services** from the extension and combines them with your own templates:
 
 ```
 bun manifest frontend build
@@ -185,14 +230,17 @@ bun manifest frontend build
        ▼
   2. postBuild runs automatically:
        │
-       ├─→ build-blog.ts (content/posts/*.md → dist/*.html)
+       ├─→ build-blog.ts
+       │     ├─ loadPosts() — extension service reads & parses markdown
+       │     ├─ your templates — render HTML pages from posts
+       │     └─ generateRss() — extension service creates RSS XML
        │
        └─→ Tailwind CLI (scans dist/*.html → dist/index.css)
 ```
 
 1. **JS bundle** — Bun bundles your TypeScript entry point into `dist/`. CSS is skipped (`bundleCss: false`) because Tailwind CLI handles it.
 
-2. **Blog build** (via `postBuild`) — reads every `.md` file in `content/posts/`, parses frontmatter, converts markdown to HTML with `marked`, and writes complete HTML pages to `dist/`. Generates the index page (all posts sorted by date), individual post pages with prev/next navigation, and an about page.
+2. **Blog build** (via `postBuild`) — your build script calls `loadPosts()` to read and parse all markdown files, passes posts through your template functions to generate HTML, and calls `generateRss()` to produce the RSS feed. The extension services handle parsing and data; your script handles layout and design.
 
 3. **Tailwind CLI** (via `postBuild`) — scans all files in `dist/` for Tailwind utility classes and generates the final CSS. The `@tailwindcss/typography` plugin provides the `prose` class used for article body styling.
 
@@ -217,29 +265,28 @@ The `/__health` endpoint at `http://localhost:PORT/__health` returns `200` when 
 
 ## Customizing the Build Script
 
-The build script at `scripts/build-blog.ts` is yours to edit. Common customizations:
+The build script at `scripts/build-blog.ts` is yours to edit. The architecture separates concerns:
 
-**Site metadata** — Edit the constants at the top of the file:
+- **Extension services** (`loadPosts`, `generateRss`, `parseFrontmatter`) handle markdown parsing, post loading, and RSS generation. You generally don't need to modify these.
+- **Templates** (inline in your build script) define the HTML layout and design. This is what you customize.
+- **Orchestration** (bottom of your build script) ties it together — load posts, render pages, write files.
 
-```typescript
-const SITE_TITLE = "My Blog";
-const SITE_DESCRIPTION = "Thoughts, tutorials, and notes.";
-const AUTHOR = "Your Name";
-```
+Common customizations:
 
-**Social links** — Add or remove entries:
+**Site metadata** — Edit the `SiteConfig` object at the top:
 
 ```typescript
-const SOCIAL_LINKS = {
-  github: "https://github.com/yourname",
-  twitter: "https://twitter.com/yourname",
-  email: "mailto:you@example.com",
-};
+const SiteConfig = {
+  title: "My Blog",
+  description: "Thoughts, tutorials, and notes.",
+  url: "https://example.com",
+  author: "Your Name",
+}
 ```
 
-**About page** — Edit the `ABOUT_TEXT` HTML string.
+**Page templates** — The `layout()`, `indexPage()`, and `postPage()` functions contain the HTML. Edit them directly — there's no template engine to learn. Add dark mode, navigation, social links, about pages — whatever your blog needs.
 
-**Page templates** — The `layout()`, `generateIndex()`, `generatePosts()`, and `generateAbout()` functions contain the HTML templates. Edit them directly — there's no template engine to learn.
+**Additional pages** — Add new functions following the same pattern (generate HTML, call `writePage()`). The extension services give you the parsed posts; what you render is up to you.
 
 ---
 
@@ -362,11 +409,7 @@ bun add -d @tailwindcss/cli
 
 ### Dark mode not working
 
-The theme toggle script runs inline in `<head>` to avoid a flash of wrong theme. Check:
-
-1. The `<script>` tag is present in the HTML `<head>`.
-2. `localStorage` is not blocked (private/incognito mode may behave differently).
-3. The `dark:` Tailwind variants are present in the generated CSS — if not, rebuild with `bun run build`.
+The default template doesn't include dark mode — it's kept simple as a starting point. To add it, look at `scripts/build-blog.ts` in a project that has customized the templates, or add `dark:` Tailwind variants and a theme toggle script to your `layout()` function.
 
 ---
 
@@ -379,7 +422,7 @@ your-project/
 │       ├── hello-world.md    # Example post
 │       └── my-post.md        # Your posts go here
 ├── scripts/
-│   └── build-blog.ts        # Blog build script (your copy)
+│   └── build-blog.ts        # Blog build script (your copy — templates + orchestration)
 ├── frontend/
 │   ├── index.ts              # TypeScript entry point
 │   ├── styles.css            # Tailwind CSS imports
@@ -389,16 +432,19 @@ your-project/
 ├── dist/                     # Built output (gitignored)
 │   ├── index.html            # Post listing
 │   ├── index.css             # Tailwind CSS with typography
-│   ├── about/
-│   │   └── index.html        # About page
+│   ├── rss.xml               # RSS feed
 │   └── posts/
 │       └── hello-world/
 │           └── index.html    # Individual post page
 └── extensions/
     └── manifest-content-blog/
         ├── EXTENSION.md
+        ├── services/
+        │   ├── posts.ts      # Post loading & parsing
+        │   ├── rss.ts        # RSS feed generation
+        │   └── frontmatter.ts # YAML frontmatter parser
         ├── templates/
-        │   ├── build-blog.ts
+        │   ├── build-blog.ts # Template build script
         │   └── styles.css
         └── content/
             └── posts/
