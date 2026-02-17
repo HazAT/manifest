@@ -1,4 +1,6 @@
 import { createManifestServer } from './manifest'
+import sparkConfig from './config/spark'
+import { sparkDb } from './services/sparkDb'
 
 const server = await createManifestServer({
   projectDir: import.meta.dir,
@@ -8,20 +10,20 @@ const server = await createManifestServer({
 console.log(`🔧 Manifest server running on http://localhost:${server.port}`)
 console.log(`   Production is our dev environment.`)
 
-// Spark: resolve once at startup, emit events for unhandled errors
+// Spark: emit events for unhandled errors via sparkDb
 try {
-  const sparkConfig = (await import('./config/spark')).default
   if (sparkConfig.enabled && sparkConfig.watch.unhandledErrors) {
-    const { spark } = await import('./extensions/spark/services/spark')
     let isEmitting = false
     const emitError = (error: Error) => {
       if (isEmitting) return // Prevent infinite loop: emit failure → unhandledRejection → emit
       isEmitting = true
-      spark.emit({
-        type: 'unhandled-error',
-        traceId: Bun.randomUUIDv7(),
-        error: { message: error.message, stack: error.stack },
-      }).catch(() => {}).finally(() => { isEmitting = false })
+      try {
+        sparkDb.logEvent({
+          type: 'unhandled-error',
+          traceId: Bun.randomUUIDv7(),
+          error: { message: error.message, stack: error.stack },
+        })
+      } catch {} finally { isEmitting = false }
     }
 
     process.on('uncaughtException', (error) => {
@@ -31,5 +33,12 @@ try {
     process.on('unhandledRejection', (reason) => {
       try { emitError(reason instanceof Error ? reason : new Error(String(reason))) } catch {}
     })
+  }
+
+  // Start periodic cleanup
+  if (sparkConfig.enabled) {
+    setInterval(() => {
+      try { sparkDb.cleanup() } catch {}
+    }, sparkConfig.db.cleanup.intervalMs)
   }
 } catch {} // Spark setup must never prevent server from starting

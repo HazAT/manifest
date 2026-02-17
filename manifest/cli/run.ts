@@ -119,9 +119,9 @@ export async function runProcess(
     try {
       const sparkConfig = (await import('../../config/spark')).default
       if (sparkConfig.enabled && sparkConfig.watch.processErrors) {
-        const { spark } = await import('../../extensions/spark/services/spark')
+        const { sparkDb } = await import('../../services/sparkDb')
         const tail = buffer.slice(-TAIL_LINES).join('\n')
-        await spark.emit({
+        sparkDb.logEvent({
           type: 'process-error',
           traceId: crypto.randomUUID(),
           command: command.join(' '),

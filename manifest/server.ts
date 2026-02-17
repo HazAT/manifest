@@ -8,6 +8,8 @@ import { createStaticHandler, watchFrontend } from './frontend'
 import { checkRateLimit, startCleanup } from '../services/rateLimiter'
 import frontendConfig from '../config/frontend'
 import manifestConfig from '../config/manifest'
+import sparkConfig from '../config/spark'
+import { sparkDb } from '../services/sparkDb'
 
 const textEncoder = new TextEncoder()
 
@@ -22,39 +24,8 @@ export async function createManifestServer(options: ManifestServerOptions) {
   const registry = await scanAllFeatures(options.projectDir)
   const router = createRouter(registry)
 
-  // Resolve Spark once at startup — never in the error path
-  let sparkEmitter: ((event: any) => void) | null = null
-  try {
-    const sparkConfig = (await import('../config/spark')).default
-    if (sparkConfig.enabled && sparkConfig.watch.serverErrors) {
-      const { spark } = await import('../extensions/spark/services/spark')
-      sparkEmitter = (event) => spark.emit(event)
-    }
-  } catch {} // Spark setup must never prevent server from starting
-
-  const emitSparkError = (opts: {
-    requestId: string
-    featureName: string
-    route: string
-    error: unknown
-    input: Record<string, unknown>
-  }) => {
-    if (!sparkEmitter) return
-    try {
-      sparkEmitter({
-        type: 'server-error',
-        traceId: opts.requestId,
-        feature: opts.featureName,
-        route: opts.route,
-        status: 500,
-        error: {
-          message: opts.error instanceof Error ? opts.error.message : String(opts.error),
-          stack: opts.error instanceof Error ? opts.error.stack : undefined,
-        },
-        request: { input: opts.input },
-      })
-    } catch {} // Spark emission must never break the server
-  }
+  const sparkEnabled = sparkConfig.enabled
+  const sparkWatchErrors = sparkEnabled && sparkConfig.watch.serverErrors
 
   // Static file serving (only if dist/ exists)
   const distDir = path.resolve(options.projectDir, frontendConfig.outputDir)
@@ -104,6 +75,15 @@ export async function createManifestServer(options: ManifestServerOptions) {
       const match = router.match(method, pathname)
 
       if (match.kind === 'method_not_allowed') {
+        if (sparkEnabled) {
+          try {
+            sparkDb.logAccess({
+              timestamp: new Date().toISOString(), method, path: pathname, status: 405,
+              duration_ms: 0, ip: server.requestIP(req)?.address ?? undefined,
+              user_agent: req.headers.get('user-agent') ?? undefined,
+            })
+          } catch {}
+        }
         return Response.json({ status: 405, message: 'Method not allowed' }, { status: 405 })
       }
 
@@ -114,6 +94,15 @@ export async function createManifestServer(options: ManifestServerOptions) {
           if (staticResponse) return staticResponse
         }
 
+        if (sparkEnabled) {
+          try {
+            sparkDb.logAccess({
+              timestamp: new Date().toISOString(), method, path: pathname, status: 404,
+              duration_ms: 0, ip: server.requestIP(req)?.address ?? undefined,
+              user_agent: req.headers.get('user-agent') ?? undefined,
+            })
+          } catch {}
+        }
         return Response.json({ status: 404, message: 'Not found' }, { status: 404 })
       }
 
@@ -128,21 +117,23 @@ export async function createManifestServer(options: ManifestServerOptions) {
         const result = checkRateLimit(key, feature.rateLimit)
         if (!result.allowed) {
           const durationMs = Math.round((performance.now() - start) * 100) / 100
-          // Emit Spark event for rate limiting
-          if (sparkEmitter) {
+          if (sparkEnabled) {
             try {
-              sparkEmitter({
-                type: 'rate-limit',
-                traceId: requestId,
-                feature: feature.name,
-                route: `${method} ${pathname}`,
-                status: 429,
-                ip,
-                limit: { max: feature.rateLimit.max, windowSeconds: feature.rateLimit.windowSeconds },
-                remaining: 0,
-                retryAfter: result.retryAfter,
+              sparkDb.logAccess({
+                timestamp: new Date().toISOString(), method, path: pathname, status: 429,
+                duration_ms: durationMs, ip, feature: feature.name, request_id: requestId,
+                user_agent: req.headers.get('user-agent') ?? undefined,
               })
-            } catch {} // Spark emission must never break the server
+              if (sparkWatchErrors) {
+                sparkDb.logEvent({
+                  type: 'rate-limit',
+                  traceId: requestId,
+                  feature: feature.name,
+                  route: `${method} ${pathname}`,
+                  status: 429,
+                })
+              }
+            } catch {}
           }
           return Response.json(
             {
@@ -180,8 +171,19 @@ export async function createManifestServer(options: ManifestServerOptions) {
               Object.assign(input, body)
             }
           } catch {
+            const durationMs400 = Math.round((performance.now() - start) * 100) / 100
+            if (sparkEnabled) {
+              try {
+                sparkDb.logAccess({
+                  timestamp: new Date().toISOString(), method, path: pathname, status: 400,
+                  duration_ms: durationMs400, ip: server.requestIP(req)?.address ?? undefined,
+                  feature: feature.name, request_id: requestId,
+                  user_agent: req.headers.get('user-agent') ?? undefined,
+                })
+              } catch {}
+            }
             return Response.json(
-              { status: 400, message: 'Invalid JSON body', meta: { request_id: requestId, duration_ms: Math.round(performance.now() - start) } },
+              { status: 400, message: 'Invalid JSON body', meta: { request_id: requestId, duration_ms: durationMs400 } },
               { status: 400 },
             )
           }
@@ -194,6 +196,16 @@ export async function createManifestServer(options: ManifestServerOptions) {
         const errors = validateInput(feature.input, input)
         if (Object.keys(errors).length > 0) {
           const durationMs = Math.round((performance.now() - start) * 100) / 100
+          if (sparkEnabled) {
+            try {
+              sparkDb.logAccess({
+                timestamp: new Date().toISOString(), method, path: pathname, status: 422,
+                duration_ms: durationMs, ip: server.requestIP(req)?.address ?? undefined,
+                feature: feature.name, request_id: requestId, input: JSON.stringify(input),
+                user_agent: req.headers.get('user-agent') ?? undefined,
+              })
+            } catch {}
+          }
           return Response.json(
             {
               status: 422,
@@ -251,7 +263,22 @@ export async function createManifestServer(options: ManifestServerOptions) {
               } catch (err) {
                 const message = err instanceof Error ? err.message : 'Internal server error'
                 fail(message)
-                emitSparkError({ requestId, featureName: feature.name, route: `${method} ${pathname}`, error: err, input })
+                if (sparkWatchErrors) {
+                  try {
+                    sparkDb.logEvent({
+                      type: 'server-error',
+                      traceId: requestId,
+                      feature: feature.name,
+                      route: `${method} ${pathname}`,
+                      status: 500,
+                      error: {
+                        message: err instanceof Error ? err.message : String(err),
+                        stack: err instanceof Error ? err.stack : undefined,
+                      },
+                      request: { input },
+                    })
+                  } catch {}
+                }
               }
             },
           })
@@ -271,10 +298,46 @@ export async function createManifestServer(options: ManifestServerOptions) {
         const durationMs = Math.round((performance.now() - start) * 100) / 100
         const envelope = toEnvelope(result, { featureName: feature.name, requestId, durationMs })
 
+        if (sparkEnabled) {
+          try {
+            sparkDb.logAccess({
+              timestamp: new Date().toISOString(), method, path: pathname, status: result.status,
+              duration_ms: durationMs, ip: server.requestIP(req)?.address ?? undefined,
+              feature: feature.name, request_id: requestId, input: JSON.stringify(input),
+              error: result.status >= 500 ? (result as any).message : undefined,
+              user_agent: req.headers.get('user-agent') ?? undefined,
+            })
+          } catch {}
+        }
+
         return Response.json(envelope, { status: result.status })
       } catch (err) {
         const durationMs = Math.round((performance.now() - start) * 100) / 100
-        emitSparkError({ requestId, featureName: feature.name, route: `${method} ${pathname}`, error: err, input })
+        if (sparkEnabled) {
+          try {
+            const errorMsg = err instanceof Error ? err.message : String(err)
+            sparkDb.logAccess({
+              timestamp: new Date().toISOString(), method, path: pathname, status: 500,
+              duration_ms: durationMs, ip: server.requestIP(req)?.address ?? undefined,
+              feature: feature.name, request_id: requestId, input: JSON.stringify(input),
+              error: errorMsg, user_agent: req.headers.get('user-agent') ?? undefined,
+            })
+            if (sparkWatchErrors) {
+              sparkDb.logEvent({
+                type: 'server-error',
+                traceId: requestId,
+                feature: feature.name,
+                route: `${method} ${pathname}`,
+                status: 500,
+                error: {
+                  message: errorMsg,
+                  stack: err instanceof Error ? err.stack : undefined,
+                },
+                request: { input },
+              })
+            }
+          } catch {}
+        }
         return Response.json(
           {
             status: 500,

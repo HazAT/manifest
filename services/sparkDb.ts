@@ -55,8 +55,8 @@ export type AccessLogQuery = {
 // Constants
 // ---------------------------------------------------------------------------
 
-const DB_DIR = '.spark'
-const DB_PATH = path.join(DB_DIR, 'spark.db')
+const DB_PATH = sparkConfig.db.path
+const DB_DIR = path.dirname(DB_PATH)
 const MAX_DATA_BYTES = 64 * 1024 // 64KB
 const MAX_USER_AGENT_BYTES = 1024 // 1KB
 
@@ -311,8 +311,8 @@ export const sparkDb = {
    */
   cleanup(): void {
     const db = getDb()
-    const maxAgeDays = (sparkConfig as any).db?.cleanup?.maxAgeDays ?? 7
-    const maxSizeMB = (sparkConfig as any).db?.cleanup?.maxSizeMB ?? 100
+    const maxAgeDays = sparkConfig.db.cleanup.maxAgeDays
+    const maxSizeMB = sparkConfig.db.cleanup.maxSizeMB
 
     const cutoff = new Date(Date.now() - maxAgeDays * 86400000).toISOString()
     db.exec(`DELETE FROM events WHERE consumed = 1 AND timestamp < '${cutoff}'`)
