@@ -138,7 +138,7 @@ export async function check(_args: string[]): Promise<number> {
         const lines = content.split('\n')
 
         for (let i = 0; i < lines.length; i++) {
-          const line = lines[i].trimStart()
+          const line = lines[i]!.trimStart()
 
           // Skip default exports and re-exports
           if (line.startsWith('export default ') || line.startsWith('export {')) continue
@@ -152,7 +152,7 @@ export async function check(_args: string[]): Promise<number> {
           // Check if previous non-empty line ends with */
           let hasJsDoc = false
           for (let j = i - 1; j >= 0; j--) {
-            const prev = lines[j].trim()
+            const prev = lines[j]!.trim()
             if (prev === '') continue
             if (prev.endsWith('*/')) hasJsDoc = true
             break
