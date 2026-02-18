@@ -28,9 +28,7 @@ Manifest ships with **Spark**, a reactive AI sidekick that watches your running 
 
 **Know the why.** Before building a feature, understand why it exists — not just what it does. If the user asks for something and the motivation isn't clear, ask. The answer might change the approach, or reveal that the real need is different from the request. When you learn something that shifts the project's direction or clarifies its purpose, update `VISION.md`. This file is about *the app being built* — not about Manifest the framework. Keep it brief — a few sentences, not an essay. The vision should evolve with the project, not fossilize after day one.
 
-**We build this together.** The codebase is a shared workspace — between you, the next agent, and the human. When you make a significant change, the ripple doesn't stop at the code. Ask yourself: does AGENTS.md still tell the truth? Are the skills still accurate? Does MANIFEST.md reflect reality? Does the config cover what was just added? Every significant change is a prompt to check that the rest of the system still makes sense. Run `bun manifest learn` after large changes, or load `.claude/skills/manifest-learn/SKILL.md` for the full checklist. The goal is simple: no one should ever follow stale instructions because you forgot to update the map after moving the furniture.
-
-**Commands are agent prompts.** Manifest CLI commands don't silently generate files — they output structured prompts that tell the agent exactly what to do. Scaffolding commands (`manifest feature make`, `manifest extension make`, `manifest extension install`) produce pure prompts: pre-context, instructions, and actionable steps. The agent reads the prompt and does the work. Work commands (`check`, `index`, `learn`) do their job but frame output as agent instructions — telling you what to fix, update, or verify. Commands may reference skills for deeper context. The CLI is the briefing; the agent is the executor.
+**We build this together.** The codebase is a shared workspace — between you, the next agent, and the human. When you make a significant change, the ripple doesn't stop at the code. Ask yourself: does AGENTS.md still tell the truth? Are the skills still accurate? Does the config cover what was just added? Every significant change is a prompt to check that the rest of the system still makes sense. Load `.claude/skills/manifest-learn/SKILL.md` for the full reflection checklist. The goal is simple: no one should ever follow stale instructions because you forgot to update the map after moving the furniture.
 
 **Your app watches itself.** Manifest applications are designed to be observed by AI. The Spark sidekick runs alongside your app — when a feature throws a 500, when an unhandled exception crashes a process, Spark captures the error with full context (stack trace, feature name, route, trace ID, request input) and stores it in a SQLite database. A Pi extension polls the database and injects events into the agent's conversation. In both development and production, Spark investigates and fixes issues — with full tool access. In production it acts with extra care: smallest surgical fix, no refactoring, transparent about every change. This isn't bolted on — it's baked into the server, the response envelope, and the framework's error handling. Every `request_id` in a response envelope doubles as a trace ID that Spark uses to connect errors back to requests. Spark runs as a web sidecar process with a browser dashboard on port 8081, watching your app and fixing issues autonomously. Build with the assumption that an agent is always watching.
 
@@ -73,13 +71,11 @@ To update the framework from upstream, load the `manifest-update` skill. To cont
 
 ```
 ├── VISION.md           # YOUR APP's soul. What you're building and why. Not about Manifest.
-├── MANIFEST.md         # Auto-generated index. Read this to orient yourself.
 ├── manifest/           # THE FRAMEWORK. Source code. Read it, modify it.
 ├── features/           # One file per behavior. This IS the application.
 ├── schemas/            # Drizzle ORM table definitions. One file per table.
 ├── services/           # Shared services. Plain exported functions.
 ├── policies/           # Authorization. One file per resource.
-├── commands/           # CLI commands.
 ├── config/             # Typed config files. No YAML, no .env magic.
 │   └── spark.ts        # Spark sidekick config: environment, DB, behavior.
 ├── extensions/         # Manifest extensions (each has EXTENSION.md).
@@ -88,13 +84,12 @@ To update the framework from upstream, load the `manifest-update` skill. To cont
 ├── .pi/                # Pi agent configuration for this project.
 │   └── settings.json   # Points Pi to the Spark extension.
 ├── .spark/             # Runtime artifacts (gitignored).
-│   ├── spark.db        # SQLite database — events, access logs, all Spark state.
-│   └── logs/           # Process runner output logs.
+│   └── spark.db        # SQLite database — events, access logs, all Spark state.
 ├── tests/              # Mirrors features/ 1:1.
 └── index.ts            # Entry point.
 ```
 
-**Start with `MANIFEST.md`** — it lists every feature, schema, service, and command with descriptions. Then read the relevant feature files.
+**Read AGENTS.md first** — it describes project conventions and what the codebase does. Then read the relevant feature files.
 
 ## How to Write a Feature
 
@@ -258,8 +253,6 @@ export const tableName = pgTable('table_name', {
 
 Services are shared logic that multiple features (or scripts) can import. Plain exported objects with methods. No classes. No DI container. TypeScript's module system is the dependency injection.
 
-Use `bun manifest service make <Name>` to scaffold a new service file with the correct structure.
-
 ### When to create a service
 
 - **Two features need the same logic** → extract to a service
@@ -314,76 +307,6 @@ export const markdown = {
 - **One responsibility per service** — a service does one thing well. `markdown` parses markdown. `mailer` sends email. Don't combine unrelated logic.
 - **Features import services directly** — `import { markdown } from '../services/markdown'`. No registry, no DI.
 
-## CLI Commands
-
-**Start here.** Run `bun manifest status` when you first arrive at the project. It tells you what's healthy, what's stale, and what needs attention — in seconds.
-
-### Which Command When
-
-| Situation | Command | What it does |
-|-----------|---------|-------------|
-| **Just arrived at this codebase** | `bun manifest status` | Quick pulse check — features, health, git, Spark, staleness |
-| **Something is broken** | `bun manifest doctor` | Deep diagnostics — imports every feature, checks config, shows extension troubleshooting |
-| **After making changes** | `bun manifest learn` | Scans for staleness — MANIFEST.md drift, AGENTS.md accuracy, missing tests |
-| **Before committing** | `bun manifest check` | Convention validator — descriptions, sideEffects, routes, input fields |
-| **MANIFEST.md is stale** | `bun manifest index` | Regenerates MANIFEST.md from current features, extensions, and CLI commands |
-
-### All Commands
-
-```bash
-# Quick start
-bun manifest status                       # Project health at a glance (start here)
-bun --hot index.ts                        # Start server with hot reload
-bun test                                  # Run all tests
-
-# Validation & diagnostics
-bun manifest check                        # Validate conventions
-bun manifest index                        # Rebuild MANIFEST.md
-bun manifest learn                        # Check for staleness after changes
-bun manifest doctor                       # Diagnose system issues
-
-# Scaffolding (outputs agent prompts — no files written)
-bun manifest feature make <Name>          # Scaffold a new feature
-bun manifest extension make <name>        # Scaffold a new extension
-bun manifest extension install <src>      # Install an extension from GitHub or npm
-bun manifest extension list               # List installed extensions
-
-# Frontend
-bun manifest frontend install             # Choose and install a frontend preset
-bun manifest frontend build               # Build frontend for production
-bun manifest frontend dev                 # Start standalone frontend watcher
-
-# Process runner
-bun manifest run <command> [args...]      # Run with logging + Spark error reporting
-bun manifest run dev                      # Sugar for: bun --hot index.ts
-
-# Spark sidekick
-bun manifest spark init                   # Set up Spark (config + Pi extension)
-bun manifest spark status                 # Show Spark state
-```
-
-### Spark Commands
-
-### Starting Spark
-
-Spark runs as a web sidecar process alongside your app. It uses the Pi SDK with the Spark extension loaded, running entirely on Bun.
-
-```bash
-# Terminal 1: your app
-bun --hot index.ts
-
-# Terminal 2: Spark sidecar
-SPARK_WEB_TOKEN=your-token bun extensions/spark-web/services/sparkWeb.ts
-```
-
-1. Enable in `config/spark.ts`: set `web.enabled: true` and `SPARK_WEB_TOKEN`
-2. Start the sidecar with the command above
-3. Open `http://localhost:8081/` — you'll see a login prompt where you enter your token
-
-The sidecar runs as a separate process on its own port — it polls the SQLite database for new events, runs a health assessment on startup, and begins responding to errors from your running app. **It survives main server crashes**, so you can still talk to Spark and investigate what happened even if your app goes down. Authentication uses HttpOnly cookies — enter your token once at the login prompt and you're in for the session. You can load additional local extensions into the Spark agent via the `web.extensions` config array in `config/spark.ts`. See `extensions/spark-web/EXTENSION.md` for full docs.
-
-For human interactive Pi sessions (not Spark), use `bunx pi` — it loads the Spark extension via `.pi/settings.json` and works as a full coding agent that also reacts to app errors. Read `extensions/spark/EXTENSION.md` for details.
-
 ## The Framework
 
 The framework lives in `manifest/`. Read it:
@@ -400,7 +323,6 @@ The framework lives in `manifest/`. Read it:
 | `testing.ts` | `createTestClient()` — call features by name without HTTP. Stream testing. |
 | `frontend.ts` | `Bun.build()` wrapper, static file serving, live reload. |
 | `index.ts` | Barrel export for framework types and utilities. |
-| `cli/` | CLI commands: status, serve, index, check, learn, doctor, make:feature, extension (make/install/list), frontend, spark, run. Each command exports `meta` for self-documentation. |
 
 If something in the framework doesn't work for your use case, modify it. It's your code.
 
@@ -459,15 +381,9 @@ Longer documentation, usage examples, and setup instructions.
 
 Extension structure mirrors the project: `extensions/<name>/features/`, `extensions/<name>/schemas/`, `extensions/<name>/services/`. The scanner automatically picks up features from `extensions/*/features/`.
 
-Manage extensions with CLI commands:
-- `bun run manifest extension make <name>` — Scaffold a new extension
-- `bun run manifest extension install <src>` — Install from a source
-- `bun run manifest extension list` — List installed extensions
-- `bun run manifest doctor` — Diagnose system issues and show extension troubleshooting
-
 ### Troubleshooting section (required)
 
-Every extension MUST include a `## Troubleshooting` section in its `EXTENSION.md`. This section is read by `bun manifest doctor` and shown to agents when something breaks. Write it as step-by-step diagnostic checks — things an agent can run to figure out what went wrong and self-repair without asking for help.
+Every extension MUST include a `## Troubleshooting` section in its `EXTENSION.md`. This section is shown to agents when something breaks. Write it as step-by-step diagnostic checks — things an agent can run to figure out what went wrong and self-repair without asking for help.
 
 Good troubleshooting entries include:
 - **What can go wrong** — missing dependencies, misconfigured files, stale builds
@@ -513,6 +429,26 @@ Your Manifest server captures errors (500 responses, unhandled exceptions) and r
 
 The Spark web sidecar runs as a separate Bun process on its own port with the Pi SDK and Spark extension loaded. It survives main server crashes, so Spark can investigate even when your app is down.
 
+### Starting Spark
+
+Spark runs as a web sidecar alongside your app:
+
+```bash
+# Terminal 1: your app
+bun run dev                                                        # bun --hot index.ts
+
+# Terminal 2: Spark sidecar
+SPARK_WEB_TOKEN=your-token bun extensions/spark-web/services/sparkWeb.ts
+```
+
+1. Enable in `config/spark.ts`: set `web.enabled: true` and configure `SPARK_WEB_TOKEN`
+2. Start the sidecar with the command above
+3. Open `http://localhost:8081/` — enter your token at the login prompt
+
+Authentication uses HttpOnly cookies — enter your token once and you're in for the session. You can load additional local extensions into the Spark agent via the `web.extensions` config array in `config/spark.ts`. See `extensions/spark-web/EXTENSION.md` for full docs.
+
+For human interactive Pi sessions (not Spark), use `bunx pi` — it loads the Spark extension via `.pi/settings.json` and works as a full coding agent that also reacts to app errors. Read `extensions/spark/EXTENSION.md` for details.
+
 ### Environment Modes
 
 | Environment | Tools | Behavior | Use Case |
@@ -528,36 +464,10 @@ Every event carries a `traceId` that links back to the original request. For ser
 
 ## When In Doubt
 
-1. Run `bun manifest status` — quick health check, shows what needs attention.
-2. Read the source. The answers are there.
-3. Read `MANIFEST.md` — it's the index of everything (features, extensions, CLI commands).
-4. Read the feature file — it's self-contained.
-5. Run `bun manifest check` — it validates conventions.
-6. Run `bun manifest doctor` — deep diagnostics when something is broken.
-7. Read `git log` — the commit history explains what changed and why.
+1. Read the source. The answers are in the code, not in assumptions.
+2. Read `AGENTS.md` — it describes project conventions and what the codebase does.
+3. Read the feature file — it's self-contained. Everything about a behavior is in one place.
+4. Run `bun test` — verify things still work.
+5. Read `git log` — the commit history explains what changed and why.
 
-## Process Runner
 
-Use `bun manifest run` to wrap commands. This logs all output to `.spark/logs/` and emits a Spark event if the command fails — so agents get notified about build failures, test failures, and crashes automatically.
-
-```bash
-bun manifest run bun test              # Run tests with Spark monitoring
-bun manifest run dev                   # Sugar for: bun --hot index.ts
-bun manifest run bun install           # Any command works
-```
-
-**When to use it:**
-- Running tests, builds, or any command where failure matters
-- Starting the dev server (long-running — output streams to log)
-- Any command where you want Spark to catch failures
-
-**When NOT to use it:**
-- Quick one-shot commands like `git status`, `ls`, `cat`
-- Commands that need interactive input (the runner pipes but doesn't provide a tty)
-
-**Sugar shortcuts:**
-| Short | Expands to |
-|-------|-----------|
-| `manifest run dev` | `bun --hot index.ts` |
-
-Logs are written to `.spark/logs/<command>-YYYY-MM-DD-HHmmss.log`. Run `bun manifest doctor` to see recent logs.
