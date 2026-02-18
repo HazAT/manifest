@@ -21,7 +21,7 @@ const RPC_METHOD_NOT_FOUND = -32601
 const RPC_INVALID_PARAMS = -32602
 
 /** Accepted MCP protocol versions. */
-const ACCEPTED_VERSIONS = new Set(['2025-03-26', '2024-11-05'])
+const ACCEPTED_VERSIONS = new Set(['2025-11-25', '2025-06-18', '2025-03-26', '2024-11-05'])
 
 /** The single tool this MCP server exposes. */
 const TALK_TO_SPARK_TOOL = {
@@ -96,6 +96,37 @@ export async function handleMcp(req: Request, config: McpConfig): Promise<Respon
     return new Response(null, { status: 200 })
   }
 
+  // --- GET: SSE stream for server-initiated notifications ---
+  if (req.method === 'GET') {
+    // Return a keep-alive SSE stream. The spec allows clients to open this
+    // before or after initialize. Currently we don't push server-initiated
+    // notifications, but the stream must exist for spec compliance.
+    // We must hold a reference to the writer to prevent GC from closing the stream.
+    const { readable, writable } = new TransformStream<Uint8Array, Uint8Array>()
+    const writer = writable.getWriter()
+    const enc = new TextEncoder()
+
+    // Send an SSE comment as keepalive to confirm the stream is alive
+    writer.write(enc.encode(': keepalive\n\n')).catch(() => {})
+
+    // Keep writer alive by storing it; clean up when client disconnects
+    const interval = setInterval(() => {
+      writer.write(enc.encode(': keepalive\n\n')).catch(() => {
+        clearInterval(interval)
+        writer.close().catch(() => {})
+      })
+    }, 30_000)
+
+    return new Response(readable, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+      },
+    })
+  }
+
   // --- Only POST from here on ---
   if (req.method !== 'POST') {
     return new Response('Method Not Allowed', { status: 405 })
@@ -132,7 +163,7 @@ export async function handleMcp(req: Request, config: McpConfig): Promise<Respon
 
     return jsonResponse(
       rpcOk(id, {
-        protocolVersion: '2025-03-26',
+        protocolVersion: version,
         capabilities: { tools: {} },
         serverInfo: { name: 'spark', version: '0.1.0' },
         instructions:
@@ -153,10 +184,13 @@ export async function handleMcp(req: Request, config: McpConfig): Promise<Respon
     return jsonResponse(rpcOk(id, {}))
   }
 
-  // All remaining methods require a valid Mcp-Session-Id
+  // Validate Mcp-Session-Id if provided, but don't require it.
+  // Bearer token auth is the primary gate — session IDs are optional per the spec.
   const mcpSessionId = req.headers.get('mcp-session-id')
-  if (!mcpSessionId || !mcpSessions.has(mcpSessionId)) {
-    return jsonResponse(rpcError(id, RPC_INVALID_REQUEST, 'Missing or unknown Mcp-Session-Id'), 400)
+  if (mcpSessionId && !mcpSessions.has(mcpSessionId)) {
+    // Unknown session — might be stale from a sidecar restart. Accept anyway
+    // since the Bearer token already authenticated this request.
+    mcpSessions.add(mcpSessionId)
   }
 
   // tools/list — return the single tool definition
@@ -224,6 +258,12 @@ export async function handleMcp(req: Request, config: McpConfig): Promise<Respon
             return
           }
 
+          // Only process assistant messages — skip user/toolResult messages
+          if (event.type === 'message_start' || event.type === 'message_end') {
+            const role = event.message?.role
+            if (role && role !== 'assistant') return
+          }
+
           switch (event.type) {
             case 'message_update': {
               // Forward incremental text tokens as log notifications
@@ -257,17 +297,25 @@ export async function handleMcp(req: Request, config: McpConfig): Promise<Respon
               break
             }
 
-            case 'message_end': {
+            case 'agent_end': {
               finished = true
-              // Extract final text from the completed message
-              const msg = event.message
+              // agent_end fires after the full loop (possibly multiple tool calls).
+              // event.messages contains all messages from this turn.
+              // Extract text from the last assistant message.
               let finalText = accumulatedText
-              if (msg?.content && Array.isArray(msg.content)) {
-                const textParts = msg.content
-                  .filter((c: any) => c.type === 'text')
-                  .map((c: any) => c.text as string)
-                if (textParts.length > 0) {
-                  finalText = textParts.join('')
+              const msgs = event.messages
+              if (Array.isArray(msgs)) {
+                for (let i = msgs.length - 1; i >= 0; i--) {
+                  const m = msgs[i]
+                  if (m?.role === 'assistant' && Array.isArray(m.content)) {
+                    const textParts = m.content
+                      .filter((c: any) => c.type === 'text')
+                      .map((c: any) => c.text as string)
+                    if (textParts.length > 0) {
+                      finalText = textParts.join('')
+                      break
+                    }
+                  }
                 }
               }
 
