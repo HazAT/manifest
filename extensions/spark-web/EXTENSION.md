@@ -5,6 +5,7 @@ description: "Browser dashboard for the Spark AI sidekick. Runs as a sidecar pro
 author: "Manifest"
 services:
   - sparkWeb: "Starts a standalone Bun.serve() sidecar with an in-process Pi AgentSession and the Spark extension, bridging WebSocket connections to browsers."
+  - mcp: "MCP Streamable HTTP protocol handler at POST/DELETE /mcp. Exposes a single `talk_to_spark` tool for external MCP clients (Claude Desktop, Cursor, etc.)."
 config:
   - web.enabled: "Enable the Spark web dashboard. (default: false)"
   - web.port: "Port for the sidecar server. (default: 8081, env: SPARK_WEB_PORT)"
@@ -88,6 +89,69 @@ Once loaded, the dashboard shows:
 - **Error events** — when your app throws errors, they appear in the conversation as Spark investigates
 
 Type messages in the input box to interact with Spark. It's a full Pi agent — you can ask it questions, have it investigate errors, or request code changes (in development mode).
+
+---
+
+## MCP Endpoint
+
+The sidecar also exposes an MCP (Model Context Protocol) Streamable HTTP endpoint at `/mcp`. This lets external MCP clients — Claude Desktop, Cursor, or any MCP-compatible tool — connect to Spark and use it as a tool.
+
+**Authentication:** Bearer token (`Authorization: Bearer <token>`) on every request. The same `SPARK_WEB_TOKEN` is used — no extra config needed.
+
+**Transport:** MCP Streamable HTTP (JSON-RPC 2.0). `tools/call` responses stream as Server-Sent Events.
+
+**Tool:** One tool: `talk_to_spark` — sends a message to the live Spark agent session and streams back the response.
+
+**Shared session:** MCP clients share the same `AgentSession` as the browser dashboard. Messages and conversation history are shared across both interfaces.
+
+### Connecting from Claude Desktop
+
+Add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "spark": {
+      "url": "http://localhost:8081/mcp",
+      "headers": {
+        "Authorization": "Bearer your-token"
+      }
+    }
+  }
+}
+```
+
+### Manual verification with curl
+
+```bash
+TOKEN=your-token
+
+# 1. Initialize — get a session ID
+curl -s -X POST http://localhost:8081/mcp \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"0.1"}}}' \
+  -D - | grep -E '(Mcp-Session-Id|^\{)'
+
+# 2. List tools
+curl -s -X POST http://localhost:8081/mcp \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <id-from-above>" \
+  -d '{"jsonrpc":"2.0","id":2,"method":"tools/list"}'
+
+# 3. Call talk_to_spark (streams SSE)
+curl -N -X POST http://localhost:8081/mcp \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -H "Mcp-Session-Id: <id-from-above>" \
+  -d '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"talk_to_spark","arguments":{"message":"What features does this app have?"}}}'
+
+# 4. Terminate session
+curl -X DELETE http://localhost:8081/mcp \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Mcp-Session-Id: <id-from-above>"
+```
 
 ---
 
@@ -239,6 +303,18 @@ This is expected — crash resilience means the sidecar outlives the main server
 ```bash
 lsof -ti:8081 | xargs kill
 ```
+
+### MCP endpoint returning 401
+
+Verify the `Authorization: Bearer <token>` header exactly matches `SPARK_WEB_TOKEN`. No trailing whitespace. The comparison is constant-time, so length differences also fail.
+
+### MCP tools/call not streaming
+
+MCP clients must accept `text/event-stream` responses. If your client reads only the first line or times out, check that it handles long-lived SSE connections — Spark may take a while for complex investigations.
+
+### MCP session expired (400 on tools/list or tools/call)
+
+Sidecar was restarted, clearing all MCP sessions. Re-initialize: send a new `initialize` request to get a fresh `Mcp-Session-Id`.
 
 ### Blank page (HTML loads but nothing renders)
 
