@@ -22,17 +22,7 @@ After making significant changes to the codebase — adding features, installing
 
 Work through each item. Not everything will need updating every time — but you must **check** every time.
 
-### 1. MANIFEST.md
-
-Is `MANIFEST.md` still accurate?
-
-```bash
-bun run manifest index
-```
-
-This regenerates the feature index automatically. But also check: does the "Known Issues" section need updating?
-
-### 2. AGENTS.md
+### 1. AGENTS.md
 
 Read `AGENTS.md` (the project root one, not the pi-level one). Ask yourself:
 
@@ -45,7 +35,7 @@ Read `AGENTS.md` (the project root one, not the pi-level one). Ask yourself:
 
 If any section is stale, update it. AGENTS.md is the first thing an agent reads — if it's wrong, every subsequent action is built on a lie.
 
-### 3. Skills
+### 2. Skills
 
 Check each skill in `.claude/skills/`:
 
@@ -56,7 +46,7 @@ Check each skill in `.claude/skills/`:
 
 Also ask: **should a new skill exist?** If you've introduced a repeatable pattern (e.g., "how to add an extension", "how to write a migration"), it might deserve its own skill.
 
-### 4. Config
+### 3. Config
 
 Read `config/manifest.ts` and any other config files:
 
@@ -64,16 +54,15 @@ Read `config/manifest.ts` and any other config files:
 - Are existing config values still relevant?
 - Did an extension bring its own config that should be documented?
 
-### 5. Extensions
+### 4. Extensions
 
 If extensions were added or modified:
 
 - Does each extension have an `EXTENSION.md`?
 - Does `AGENTS.md` mention the extension?
-- Does `MANIFEST.md` index the extension's features?
 - Are the extension's dependencies installed?
 
-### 6. Tests
+### 5. Tests
 
 - Do new features have corresponding test files?
 - Did changes to schemas/services break existing tests?
@@ -82,7 +71,7 @@ If extensions were added or modified:
 bun test
 ```
 
-### 7. Types and Build
+### 6. Types and Build
 
 ```bash
 bunx tsc --noEmit
@@ -90,22 +79,14 @@ bunx tsc --noEmit
 
 Does everything still compile?
 
-### 8. Convention Check
-
-```bash
-bun run manifest check
-```
-
-Does the project still follow all conventions?
-
-### 9. Dependencies
+### 7. Dependencies
 
 If new packages were installed:
 
 - Are they imported explicitly where used?
 - Is there a reason documented somewhere (commit message, AGENTS.md, or feature description) for why this dependency exists?
 
-### 10. Git Log Coherence
+### 8. Git Log Coherence
 
 Read the recent commit history:
 
@@ -119,17 +100,7 @@ Does the story make sense? Would an agent reading this cold understand the progr
 
 ## How to Run This
 
-### Automated (quick scan)
-
-```bash
-bun run manifest learn
-```
-
-This runs automated checks and reports what looks stale or inconsistent.
-
-### Manual (thorough reflection)
-
-Work through the checklist above item by item. The automated scan catches structural issues. The manual pass catches semantic ones — is the documentation *accurate*, not just *present*?
+Work through the checklist above item by item. The goal is semantic accuracy — is the documentation *actually correct*, not just *present*?
 
 ---
 
@@ -139,4 +110,4 @@ This isn't busywork. The codebase is a shared workspace between you and the next
 
 **Think of it like a pair programming partner.** When your pair changes an interface, you update the callers. When they add a new module, you update the README. This is the same thing — except your pair might be a future version of yourself that has no memory of what you did today.
 
-Every time you finish a significant change: stop, run `bun manifest learn`, work through the checklist, and make it right.
+Every time you finish a significant change: stop, work through the checklist, and make it right.

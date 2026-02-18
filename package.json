@@ -7,7 +7,7 @@
     "dev": "bun --hot index.ts",
     "start": "bun index.ts",
     "test": "bun test",
-    "manifest": "bun manifest/cli/index.ts"
+    "build": "bun -e \"import { buildFrontend } from './manifest/frontend.ts'; const r = await buildFrontend(process.cwd()); if (!r.success) process.exit(1);\""
   },
   "dependencies": {
     "@mariozechner/pi-coding-agent": "0.52.10"

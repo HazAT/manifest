@@ -6,7 +6,7 @@
  *
  * Usage: bun run scripts/build-blog.ts
  *
- * Run AFTER `bun manifest frontend build` (so dist/ has bundled JS/CSS)
+ * Run AFTER `bun run build` (so dist/ has bundled JS/CSS)
  * and BEFORE Tailwind CLI (so it can scan the generated HTML for classes).
  */
 

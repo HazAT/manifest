@@ -68,14 +68,6 @@ bunx drizzle-kit migrate
 
 The first command reads your schemas and generates SQL migration files in `drizzle/`. The second applies them to your database.
 
-### 7. Regenerate the project index
-
-```bash
-bun manifest index
-```
-
-This picks up the new service and schema in `MANIFEST.md`.
-
 ---
 
 ## Usage

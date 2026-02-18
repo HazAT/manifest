@@ -328,7 +328,7 @@ SSE streams in Manifest are request-scoped — each stream runs once and closes.
 The input validation failed before the stream started. Check `response.ok` and read the JSON error body — it will tell you which fields are invalid. Common cause: missing the `prompt` field or sending it as a non-string type.
 
 **"Stream connects but no events arrive"**
-Check the server logs for errors in the `stream()` function. Make sure the feature file is in `extensions/manifest-sse-example/features/` and the server was restarted after adding it. Run `bun run manifest check` to verify the feature is detected.
+Check the server logs for errors in the `stream()` function. Make sure the feature file is in `extensions/manifest-sse-example/features/` and the server was restarted after adding it.
 
 **"Events arrive all at once instead of streaming"**
 You're likely using `await response.text()` or `await response.json()` instead of reading the stream incrementally. Use `response.body.getReader()` and process chunks as they arrive — see the frontend examples above.

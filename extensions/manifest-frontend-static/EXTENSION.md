@@ -83,7 +83,7 @@ echo 'dist/' >> .gitignore
 ### 7. Verify the build
 
 ```bash
-bun manifest frontend build
+bun run build
 ```
 
 You should see output listing built files in `dist/`.
@@ -105,8 +105,6 @@ bun --hot index.ts
 ```
 
 The server watches `frontend/` for changes, rebuilds automatically, and triggers a browser reload via SSE. No second process needed.
-
-**Optional: standalone watcher.** If you run the server separately (e.g., a different runtime), you can use `bun manifest frontend dev` to run only the file watcher. This is not needed for the normal workflow.
 
 ---
 
@@ -223,7 +221,7 @@ If you're not using Tailwind and just want plain CSS, set `bundleCss: true` and 
 
 ### `postBuild`
 
-A shell command that runs after each frontend build. It runs in both `bun manifest frontend build` and the dev watcher, so your post-processing stays in sync during development.
+A shell command that runs after each frontend build. It runs after both `bun run build` and the dev watcher rebuild, so your post-processing stays in sync during development.
 
 This extension uses it to run Tailwind CLI:
 
@@ -249,7 +247,7 @@ This is useful when content or templates live outside `frontend/` — for exampl
 
 ### Real-world example
 
-The `manifest-content-blog` extension uses all three options together: `bundleCss: false` to let Tailwind CLI handle CSS with the typography plugin, `postBuild` to run the blog build and Tailwind CLI, and `watchDirs: ['content/']` to rebuild when markdown files change. See that extension's EXTENSION.md for the full setup.
+The `manifest-content-blog` extension uses all three options together: `bundleCss: false` to let Tailwind CLI handle CSS with the typography plugin, `postBuild` to run the blog build and Tailwind CLI, and `watchDirs: ['content/']` to rebuild when markdown files change. See that extension's `EXTENSION.md` for the full setup.
 
 ---
 
@@ -271,7 +269,7 @@ When a frontend error occurs, the browser dev tools (and any error reporting) tr
 
 ## How Dev Reload Works
 
-The template `index.html` includes a dev reload script that connects to `/__dev/reload` via Server-Sent Events. When `bun manifest frontend dev` rebuilds files, it sends a reload event through this SSE endpoint and the browser refreshes automatically.
+The template `index.html` includes a dev reload script that connects to `/__dev/reload` via Server-Sent Events. When the server rebuilds files (on change during `bun --hot index.ts`), it sends a reload event through this SSE endpoint and the browser refreshes automatically.
 
 The script only activates on `localhost` — it does nothing in production.
 
@@ -310,7 +308,7 @@ When the frontend isn't working, run through these checks in order.
 
 ### Build fails or produces no output
 
-1. Run `bun manifest frontend build` and read the error output.
+1. Run `bun run build` and read the error output.
 2. Check that `config/frontend.ts` exists and has `entryPoint: 'frontend/index.ts'`.
 3. Check that `frontend/index.ts` exists — if the entry point is missing, the build has nothing to bundle.
 4. Check that `tailwindcss` is installed: `bun pm ls | grep tailwindcss`. If missing, run `bun add tailwindcss`.
@@ -322,7 +320,7 @@ When the frontend isn't working, run through these checks in order.
 3. Check that `@tailwindcss/cli` is installed: `bun pm ls | grep @tailwindcss/cli`. If missing, run `bun add @tailwindcss/cli`.
 4. Check that `frontend/styles.css` contains both `@import "tailwindcss";` and `@source "../dist";`. Without `@source`, Tailwind CLI won't scan the built JS for class names.
 5. Check that `index.html` has a `<link>` to the built CSS: `<link rel="stylesheet" href="/index.css">`.
-6. Run `bun manifest frontend build` and verify `dist/index.css` contains actual utility classes: `grep 'bg-' dist/index.css`.
+6. Run `bun run build` and verify `dist/index.css` contains actual utility classes: `grep 'bg-' dist/index.css`.
 7. If classes exist in CSS but don't render, hard-refresh the browser (`Cmd+Shift+R`) — the old CSS may be cached.
 
 ### Dev reload not working
@@ -335,7 +333,7 @@ When the frontend isn't working, run through these checks in order.
 ### Static assets in public/ not served
 
 1. Check that files are in `frontend/public/`, not `frontend/` directly.
-2. Run `bun manifest frontend build` and check that files appear in `dist/`.
+2. Run `bun run build` and check that files appear in `dist/`.
 3. Reference assets with absolute paths (`/images/logo.png`), not relative (`images/logo.png`).
 
 ### Dev watcher overwrites my CSS
