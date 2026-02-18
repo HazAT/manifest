@@ -115,7 +115,7 @@ export async function handleMcp(req: Request, config: McpConfig): Promise<Respon
         clearInterval(interval)
         writer.close().catch(() => {})
       })
-    }, 30_000)
+    }, 15_000)
 
     return new Response(readable, {
       status: 200,

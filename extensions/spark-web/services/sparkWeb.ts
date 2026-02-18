@@ -330,6 +330,7 @@ export async function startSparkSidecar(config: SparkSidecarConfig): Promise<voi
   try {
     const server = Bun.serve({
       port: config.web.port,
+      idleTimeout: 255, // seconds — max Bun allows; keeps SSE streams alive
       fetch(req, server) {
         const url = new URL(req.url)
         const pathname = url.pathname
