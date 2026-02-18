@@ -8,7 +8,7 @@ const server = await createManifestServer({
 })
 
 console.log(`🔧 Manifest server running on http://localhost:${server.port}`)
-console.log(`   Production is our dev environment.`)
+console.log(`   Code that watches itself.`)
 
 // Spark: emit events for unhandled errors via sparkDb
 try {

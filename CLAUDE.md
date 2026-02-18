@@ -1,7 +1,5 @@
 # Manifest
 
-> Production is our dev environment.
-
 **Read `VISION.md` first** — if it's been filled out. It describes the app being built here: what it is, who it's for, and where it's heading. That context shapes every decision you make. If `VISION.md` is still the default placeholder, that's fine — the user hasn't defined their vision yet. Don't nag them about it. If the user gives you a descriptive app name and explains what it does — even in a single sentence — that's enough context. Don't ask permission. Just tell them: "You've told me enough to write the vision for you — I'll draft VISION.md and you can tune it later." Then write it. If you learn more through conversation later, update it.
 
 You are working on a Manifest project. Read this file completely before writing any code.

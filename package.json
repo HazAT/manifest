@@ -1,7 +1,7 @@
 {
   "name": "manifest-app",
   "version": "0.1.0",
-  "description": "Production is our dev environment.",
+  "description": "Code that watches itself.",
   "type": "module",
   "scripts": {
     "dev": "bun --hot index.ts",
