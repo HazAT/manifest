@@ -51,7 +51,7 @@ manifest-upstream (GitHub remote)
   ▼
 manifest (local branch — framework reference, read-only)
   │
-  │  interactive cherry-pick (agent-guided)
+  │  atomic diff (.manifest-sync tracks last synced hash)
   ▼
 main (local branch — YOUR application)
   │
@@ -398,14 +398,14 @@ Extensions live in `extensions/` and follow the same conventions. Each has an `E
 
 ## Updating from Upstream
 
-When the upstream Manifest repo adds new capabilities, you cherry-pick what you want:
+When the upstream Manifest repo adds new capabilities, the agent computes the aggregate diff since your last sync and applies it atomically:
 
 1. **Fetch** — Pull upstream changes into your local `manifest` branch
-2. **Review** — The agent reads new commits and groups them by area (framework, CLI, skills, docs)
-3. **Recommend** — The agent suggests which batches to pick or skip, with reasoning
-4. **Cherry-pick** — Selected commits are applied to `main`, with conflict resolution
+2. **Diff** — Compute what changed between `.manifest-sync` hash and current upstream
+3. **Review** — Show changes grouped by area, flag files modified on both sides
+4. **Apply** — Single `git apply --3way` for the aggregate diff, one commit on `main`
 
-This is deliberate — you control what enters your application. Load the skill for the full flow:
+The `.manifest-sync` file tracks which upstream commit you're synced to. Load the skill for the full flow:
 
 ```
 Read and follow .claude/skills/manifest-update/SKILL.md
@@ -413,7 +413,7 @@ Read and follow .claude/skills/manifest-update/SKILL.md
 
 ## Contributing Back
 
-If you improve framework code in `manifest/`, CLI commands, or skills, you can contribute those changes back to the upstream repo. The agent identifies framework-related commits on `main`, cherry-picks them onto a contribution branch off `manifest`, and opens a PR.
+If you improve framework code in `manifest/` or skills, you can contribute those changes back to the upstream repo. The agent identifies framework-related commits on `main`, cherry-picks them onto a contribution branch off `manifest`, and opens a PR.
 
 ```
 Read and follow .claude/skills/manifest-contribute/SKILL.md

@@ -1,11 +1,11 @@
 ---
 name: manifest-update
-description: Update your Manifest project from the upstream base repository. Use when the user says "manifest update", "update from upstream", or "pull upstream changes". Reads upstream commits, understands intent, and applies changes intelligently.
+description: Update your Manifest project from the upstream base repository. Use when the user says "manifest update", "update from upstream", or "pull upstream changes". Computes the aggregate diff since last sync and applies it atomically.
 ---
 
 # Manifest Update
 
-Update your Manifest project from the upstream Manifest repository using interactive cherry-pick.
+Update your Manifest project from the upstream Manifest repository using diff-based atomic sync.
 
 **When to use:** The user says "manifest update", "update from upstream", "pull upstream changes", or similar.
 
@@ -13,15 +13,25 @@ Update your Manifest project from the upstream Manifest repository using interac
 
 ## Philosophy
 
-You control what enters your app. The agent reads upstream commits, batches them by area, detects dependencies, and recommends what to pick or skip — but **you decide**. Cherry-pick over rebase: selective, intentional, no surprises.
+You control what enters your app. The agent computes what changed upstream since your last sync, shows the changes grouped by area, and applies them as a single atomic diff. No per-commit cherry-picking, no replay of already-applied changes, no cascade of false conflicts.
 
-The `manifest` branch is your local read-only copy of the upstream framework. `main` is your application. Updates flow from `manifest-upstream` remote → `manifest` branch → cherry-pick onto `main`.
+The `manifest` branch is your local read-only copy of the upstream framework. `main` is your application. Updates flow from `manifest-upstream` remote → `manifest` branch → aggregate diff onto `main`.
+
+## How It Works
+
+A `.manifest-sync` file in the project root stores the upstream commit hash that `main` was last synced to. On update:
+
+1. Fetch upstream and fast-forward the `manifest` branch
+2. Diff between `.manifest-sync` hash and current `manifest` HEAD
+3. Show what changed (commits for context, files for review)
+4. Apply the aggregate diff as a single commit
+5. Update `.manifest-sync` to the new upstream hash
+
+Conflicts are resolved **once per file** — not once per upstream commit.
 
 ## Steps
 
 ### 1. Ensure Setup Is Correct
-
-Verify the two-branch model is in place:
 
 ```bash
 # Check manifest-upstream remote
@@ -29,6 +39,9 @@ git remote get-url manifest-upstream 2>/dev/null || echo "MISSING"
 
 # Check manifest branch exists
 git branch --list manifest | grep -q manifest || echo "MISSING"
+
+# Check .manifest-sync exists
+test -f .manifest-sync && echo "Sync file: $(cat .manifest-sync)" || echo "MISSING"
 ```
 
 **If `manifest-upstream` remote is missing:**
@@ -37,23 +50,24 @@ git branch --list manifest | grep -q manifest || echo "MISSING"
 git remote add manifest-upstream https://github.com/HazAT/manifest.git
 ```
 
-**If `manifest` branch is missing (migration from old setup):**
-
-The user likely cloned with the old flow (no branch separation). Offer migration:
+**If `manifest` branch is missing:**
 
 ```bash
-# Fetch upstream so we have a reference
 git fetch manifest-upstream
-
-# Create manifest branch from upstream's main
 git branch manifest manifest-upstream/main
 ```
 
-If the old `upstream` remote exists, clean it up:
+**If `.manifest-sync` is missing:**
+
+This means the project hasn't synced before with the new mechanism. Set it to the current `manifest` HEAD so that future updates diff from here:
 
 ```bash
-git remote remove upstream 2>/dev/null
+echo "$(git rev-parse manifest)" > .manifest-sync
+git add .manifest-sync
+git commit -m "chore: initialize manifest sync marker"
 ```
+
+Then tell the user: "Sync marker initialized. Run `manifest update` again next time upstream has new changes."
 
 ### 2. Sync the Manifest Branch
 
@@ -66,39 +80,38 @@ git merge --ff-only manifest-upstream/main
 git checkout -    # back to previous branch
 ```
 
-**If fast-forward fails:** Someone committed directly to the `manifest` branch. This should never happen — `manifest` is a read-only mirror. Warn the user and abort. They need to manually resolve (likely `git reset --hard manifest-upstream/main` on the `manifest` branch after backing up any commits they want to keep).
+**If fast-forward fails:** Someone committed directly to the `manifest` branch. This should never happen — `manifest` is a read-only mirror. Warn the user and offer `git reset --hard manifest-upstream/main` on the `manifest` branch.
 
-### 3. Discover What's New
-
-Find commits on `manifest` that haven't been cherry-picked onto `main` yet.
-
-**If a `manifest-sync-*` tag exists** (previous update was done):
+### 3. Check for New Changes
 
 ```bash
-# Find the most recent sync tag
-LAST_SYNC=$(git tag -l 'manifest-sync-*' --sort=-creatordate | head -1)
-git log --oneline "$LAST_SYNC"..manifest
+LAST_SYNC=$(cat .manifest-sync)
+UPSTREAM=$(git rev-parse manifest)
 ```
 
-**If no sync tag exists** (first time):
+If `$LAST_SYNC` equals `$UPSTREAM`, tell the user they're up to date and stop.
+
+Show upstream commits for context (the "why"):
 
 ```bash
-git log --oneline main..manifest
+git log --oneline "$LAST_SYNC".."$UPSTREAM"
 ```
 
-Read the **full commit messages** for every new commit — the body contains context about what changed and why:
+Show aggregate file changes (the "what"):
 
 ```bash
-git log --format="medium" "$LAST_SYNC"..manifest
-# or for first time:
-git log --format="medium" main..manifest
+git diff --stat "$LAST_SYNC".."$UPSTREAM"
 ```
 
-If there are no new commits, tell the user they're up to date and stop.
+Read the full commit messages to understand intent:
 
-### 4. Batch and Categorize
+```bash
+git log --format="medium" "$LAST_SYNC".."$UPSTREAM"
+```
 
-Group commits by the area they touch:
+### 4. Categorize and Present
+
+Group changed files by area:
 
 | Area | Path pattern | Description |
 |------|-------------|-------------|
@@ -107,109 +120,90 @@ Group commits by the area they touch:
 | **Docs** | `AGENTS.md`, `SPARK.md`, `README.md` | Documentation updates |
 | **Extensions** | `extensions/` | New or updated extensions |
 | **Config** | `config/` | Config structure changes |
+| **Root** | `index.ts`, `package.json`, `tsconfig.json` | Project root files |
 
-**Detect dependencies between commits:**
-- If commit B modifies a file that commit A created → they're linked
-- If commit B's message references commit A → they're linked
-- Present linked commits as an **atomic batch**: "pick all or none"
+For each area, check if the user has locally modified any of the same files since the last sync:
 
-A single commit touching multiple areas goes into whichever area has the most significant changes.
+```bash
+UPSTREAM_FILES=$(git diff --name-only "$LAST_SYNC".."$UPSTREAM")
 
-### 5. Present Recommendations
+for file in $UPSTREAM_FILES; do
+  LOCAL_CHANGE=$(git diff --name-only "$LAST_SYNC"..HEAD -- "$file")
+  if [ -n "$LOCAL_CHANGE" ]; then
+    echo "⚠️  $file — changed both upstream and locally (will need merge)"
+  fi
+done
+```
 
-For each batch, present:
+Present a summary like:
 
 ```
-### Batch 1: Framework — Router improvements
-Commits: abc1234, def5678
-Files: manifest/router.ts, manifest/server.ts
-Recommendation: **Pick** ✅
-Reasoning: Adds path parameter validation. No conflicts with local changes.
+### Framework (manifest/)
+Files: manifest/server.ts, manifest/frontend.ts
+Status: Clean — no local changes ✅
 
-### Batch 2: Docs — Updated AGENTS.md
-Commits: 111aaaa
+### Docs
 Files: AGENTS.md
-Recommendation: **Review carefully** ⚠️
-Reasoning: You've customized AGENTS.md. Cherry-pick will likely conflict.
-Compare your version with upstream before deciding.
-
-### Batch 3: Skills — New brainstorm skill
-Commits: 222bbbb, 333cccc (linked — 333cccc depends on 222bbbb)
-Files: .claude/skills/brainstorm/SKILL.md
-Recommendation: **Pick** ✅
-Reasoning: New file, no conflicts possible.
+Status: ⚠️ Locally modified — will need merge
 ```
 
-**Before recommending**, check if the user has modified any of the files that upstream commits touch:
+**Ask the user to confirm before applying.**
+
+### 5. Apply the Diff
+
+Generate and apply the aggregate patch:
 
 ```bash
-# For each file in a batch, check if main has diverged from the common ancestor
-MERGE_BASE=$(git merge-base main manifest)
-git diff --name-only "$MERGE_BASE" main -- <file>
+git diff "$LAST_SYNC".."$UPSTREAM" > /tmp/manifest-update.patch
+git apply --3way /tmp/manifest-update.patch
 ```
 
-If a file was modified locally, flag the batch as "Review carefully" and explain what the user changed vs what upstream changed.
+**If everything applies cleanly** — proceed to step 6.
 
-**Ask the user which batches to take.** Never auto-pick everything.
+**If `git apply --3way` reports conflicts:**
 
-### 6. Cherry-Pick Selected Batches
+The working tree will have conflict markers in affected files. Resolve them:
 
-Apply the user's chosen commits in order:
+1. Read both versions of each conflicted file
+2. Resolution rules:
+   - **Framework file not locally customized** → take upstream's version: `git checkout manifest -- <file>`
+   - **Framework file locally customized** → merge both changes, preserving local customizations while incorporating the upstream improvement
+   - **App-specific file** (`VISION.md`, user features, user services) → keep your version
+3. Stage resolved files: `git add <resolved-file>`
+
+**If `git apply --3way` fails entirely** (e.g., binary files, renames), fall back to per-file application:
 
 ```bash
-git cherry-pick <hash1> <hash2> ...
+# For each changed file, decide:
+# - No local changes → take upstream version directly
+git checkout manifest -- <file>
+
+# - Local changes exist → 3-way merge manually
+# Read the base (last sync), upstream, and local versions, then merge
 ```
 
-**If a cherry-pick conflicts:**
-
-1. Read both versions of the conflicted file
-2. Determine the right resolution:
-   - **Framework file the user hasn't customized** → accept upstream's version
-   - **Framework file the user has customized** → merge both changes, preserving the user's customizations while incorporating the upstream improvement
-   - **App-specific file** (`VISION.md`, user features, user services) → keep the user's version
-3. Resolve, stage, and continue:
+### 6. Commit the Sync
 
 ```bash
-# After editing the conflicted file
-git add <resolved-file>
-GIT_EDITOR=true git cherry-pick --continue
+# Update the sync marker
+echo "$UPSTREAM" > .manifest-sync
+
+# Stage all changes
+git add -A
+
+# Commit
+git commit -m "sync: update manifest framework to $(echo $UPSTREAM | head -c 7)
+
+Synced from $(echo $LAST_SYNC | head -c 7) to $(echo $UPSTREAM | head -c 7).
+
+Upstream commits:
+$(git log --oneline "$LAST_SYNC".."$UPSTREAM")
+
+Changed files:
+$(git diff --stat "$LAST_SYNC".."$UPSTREAM" | tail -1)"
 ```
 
-Always use `GIT_EDITOR=true` to avoid blocking on an interactive editor.
-
-If a cherry-pick is hopelessly conflicted, abort it and tell the user:
-
-```bash
-git cherry-pick --abort
-```
-
-### 7. Tag the Sync Point
-
-After all selected commits are applied, tag so the next update knows where to start:
-
-```bash
-git tag manifest-sync-$(date +%Y-%m-%d)
-```
-
-If a tag for today already exists, append a sequence number:
-
-```bash
-# Check if today's tag exists
-DATE=$(date +%Y-%m-%d)
-if git tag -l "manifest-sync-$DATE" | grep -q .; then
-  SEQ=2
-  while git tag -l "manifest-sync-$DATE-$SEQ" | grep -q .; do
-    SEQ=$((SEQ + 1))
-  done
-  git tag "manifest-sync-$DATE-$SEQ"
-else
-  git tag "manifest-sync-$DATE"
-fi
-```
-
-### 8. Verify
-
-Run the standard checks to make sure nothing broke:
+### 7. Verify
 
 ```bash
 bun test
@@ -222,11 +216,12 @@ Both must pass. If something fails, investigate and fix before considering the u
 
 ## Rules
 
-- **Never auto-pick everything.** The agent recommends, the user decides.
+- **Always show what changed before applying.** The agent presents areas and conflict risk. The user confirms.
 - **Never modify the `manifest` branch.** It's a read-only mirror of upstream.
-- **Always tag after syncing** so the next update knows where to start.
+- **Always update `.manifest-sync` after syncing** so the next update starts from the right place.
 - **Always use `GIT_EDITOR=true`** when git commands might open an editor.
-- **Always read commits first.** Understand what upstream changed before applying anything.
-- **Always test after cherry-picking.** `bun test`, `bunx tsc --noEmit`.
-- **Warn about local modifications.** If the user has customized files that upstream also changed, flag it before cherry-picking.
+- **Always read upstream commits first.** The commit messages explain why things changed — show them to the user.
+- **Always test after syncing.** `bun test`, `bunx tsc --noEmit`.
+- **Warn about local modifications.** Flag files changed on both sides before applying.
 - **Preserve app identity.** `VISION.md`, user features, user services, and deployment configs are the user's — never overwrite them with upstream versions.
+- **One commit per sync.** The entire update is a single descriptive commit, not a replay of upstream history.
