@@ -15,7 +15,6 @@ config:
   - db.cleanup.intervalMs: "How often the cleanup job runs in ms. (default: 300000)"
   - watch.unhandledErrors: "Capture uncaughtException/unhandledRejection. (default: true)"
   - watch.serverErrors: "Capture 500 errors from features. (default: true)"
-  - watch.processErrors: "Capture failures from commands run via manifest run. (default: true)"
   - environments.development.tools: "Tool access level in dev. (default: full)"
   - environments.development.behavior: "How Pi reacts to errors in dev. (default: fix)"
   - environments.production.tools: "Tool access level in prod. (default: full)"
@@ -81,7 +80,7 @@ Spark auto-loads via `.pi/settings.json`. You'll need an API key for your prefer
 
 After running `spark init`, **start a new Pi session** (close and reopen `bunx pi`). This ensures the Spark extension is loaded from the start with full context — system prompt, skills, and project awareness all wired in correctly.
 
-On first startup in a new project, Spark will proactively orient itself: reading `AGENTS.md`, `MANIFEST.md`, scanning available skills, and building familiarity with the codebase. This takes a moment but means Spark is ready to act on errors with full context — not flying blind.
+On first startup in a new project, Spark will proactively orient itself: reading `AGENTS.md`, scanning available skills, and building familiarity with the codebase. This takes a moment but means Spark is ready to act on errors with full context — not flying blind.
 
 > **Already in a Pi session when you ran `spark init`?** You can continue, but the Spark extension won't be active until you restart. Start a fresh session to get the full experience.
 
@@ -151,39 +150,7 @@ Events are stored as JSON in the `data` column:
 Event types:
 - **`server-error`** — a feature returned 500 or threw during `handle()`/`stream()`
 - **`unhandled-error`** — `uncaughtException` or `unhandledRejection` at the process level
-- **`process-error`** — a command run via `bun manifest run` exited with a non-zero code
 - **`rate-limit`** — a request was rate-limited (429)
-
-### Process error events
-
-When a command wrapped by `bun manifest run` fails, Spark emits a `process-error` event:
-
-```json
-{
-  "type": "process-error",
-  "traceId": "abc-123-def",
-  "timestamp": "2026-02-16T01:22:30.000Z",
-  "environment": "development",
-  "command": "bun test",
-  "exitCode": 1,
-  "logFile": ".spark/logs/bun-test-2026-02-16-012230.log",
-  "tail": "... last ~50 lines of output ...",
-  "error": {
-    "message": "Process 'bun test' exited with code 1"
-  }
-}
-```
-
-### Process logs
-
-All commands run via `bun manifest run` write output to `.spark/logs/` with human-readable filenames:
-
-```
-.spark/logs/bun-test-2026-02-16-012230.log
-.spark/logs/dev-2026-02-16-012227.log
-```
-
-These logs persist regardless of whether Spark events are emitted (they're written for all runs, not just failures). Use `bun manifest doctor` to see recent logs.
 
 ---
 
@@ -238,7 +205,6 @@ export default {
   watch: {
     unhandledErrors: true,
     serverErrors: true,
-    processErrors: true,
   },
 
   environments: {
@@ -268,7 +234,7 @@ export default {
 - **`db.cleanup.maxAgeDays`** — Consumed events and access logs older than this are deleted.
 - **`db.cleanup.maxSizeMB`** — When the DB file exceeds this size, aggressive pruning and VACUUM are triggered.
 - **`db.cleanup.intervalMs`** — How often the automatic cleanup job runs.
-- **`watch`** — Toggle which error types Spark captures.
+- **`watch`** — Toggle which error types Spark captures (`unhandledErrors`, `serverErrors`).
 - **`environments`** — Per-environment behavior. `tools` controls what Pi can do; `behavior` controls how aggressively it acts.
 
 ---
@@ -303,21 +269,17 @@ No refactoring in production — fix the bug, nothing more. If the root cause is
 
 ### Events not appearing in the database
 
-1. Check that Spark is enabled:
-   ```bash
-   bun run manifest spark status
-   ```
-2. Verify `config/spark.ts` exists and `enabled` is `true`.
-3. Check the database exists:
+1. Verify `config/spark.ts` exists and `enabled` is `true`.
+2. Check the database exists:
    ```bash
    ls -la .spark/spark.db
    ```
-4. Verify events are being written:
+3. Verify events are being written:
    ```bash
    bun -e "import { sparkDb } from './services/sparkDb'; console.log(sparkDb.getRecentEvents(5))"
    ```
-5. Confirm the error type is being watched — check `watch.serverErrors` and `watch.unhandledErrors` in config.
-6. Make sure the `sparkDb` service is imported in the code path that should emit the event (e.g., `server.ts` for server errors).
+4. Confirm the error type is being watched — check `watch.serverErrors` and `watch.unhandledErrors` in config.
+5. Make sure the `sparkDb` service is imported in the code path that should emit the event (e.g., `server.ts` for server errors).
 
 ### Database file growing too large
 
@@ -350,26 +312,6 @@ No refactoring in production — fix the bug, nothing more. If the root cause is
    bun -e "import { sparkDb } from './services/sparkDb'; console.log(sparkDb.db.prepare('SELECT count(*) as n FROM events WHERE consumed = 0').get())"
    ```
 5. Restart Pi — close and re-run `bunx pi` in the project directory.
-
-### Process runner not emitting events
-
-1. Check that `watch.processErrors` is `true` in `config/spark.ts`.
-2. Verify you're using `bun manifest run <command>`, not running the command directly.
-3. Check that the process actually exited non-zero:
-   ```bash
-   bun manifest run <command>; echo "exit: $?"
-   ```
-4. If intentionally killed with Ctrl+C, no event is emitted (by design).
-5. Check `.spark/logs/` for the log file — if it exists, the runner ran but event emission may have failed silently.
-
-### Process logs not appearing
-
-1. Verify `.spark/logs/` directory exists:
-   ```bash
-   ls -la .spark/logs/
-   ```
-   The runner creates it automatically, but check permissions.
-2. Run `bun manifest doctor` — it shows recent log files in the last hour.
 
 ### Corrupt database
 

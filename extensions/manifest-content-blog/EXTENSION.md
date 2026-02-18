@@ -134,18 +134,18 @@ Blog-specific options explained:
 
 ### 7. Set up build scripts
 
-Add these scripts to `package.json`:
+Ensure your `package.json` has a `build` script (or add one):
 
 ```json
 {
   "scripts": {
-    "build": "bun manifest frontend build",
+    "build": "bun -e \"import { buildFrontend } from './manifest/frontend.ts'; const r = await buildFrontend(process.cwd()); if (!r.success) process.exit(1);\"",
     "dev": "bun --hot index.ts"
   }
 }
 ```
 
-That's it — the `postBuild` config from step 6 handles the blog build and Tailwind CSS automatically. Every time `bun manifest frontend build` runs, it bundles the JS, then executes `postBuild` which builds the blog HTML and generates the CSS. No manual multi-step pipeline needed.
+That's it — the `postBuild` config from step 6 handles the blog build and Tailwind CSS automatically. Every time `bun run build` runs, it bundles the JS, then executes `postBuild` which builds the blog HTML and generates the CSS. No manual multi-step pipeline needed.
 
 ### 8. Build and verify
 
@@ -222,7 +222,7 @@ bun run build
 The build script imports **services** from the extension and combines them with your own templates:
 
 ```
-bun manifest frontend build
+bun run build
        │
        ▼
   1. Bun.build (JS only, bundleCss: false)
@@ -364,7 +364,7 @@ bun add marked
 
 ### Build order issues — HTML missing or CSS empty
 
-With `postBuild` configured (step 6), build order is handled automatically — `bun manifest frontend build` runs the JS bundle first, then the blog build, then Tailwind CLI in sequence.
+With `postBuild` configured (step 6), build order is handled automatically — `bun run build` runs the JS bundle first, then the blog build, then Tailwind CLI in sequence.
 
 If CSS is empty or missing `prose` styles, first check the `@source` directive (see below), then run `bun run build` to trigger the full pipeline.
 

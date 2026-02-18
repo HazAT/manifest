@@ -91,7 +91,7 @@ echo 'dist/' >> .gitignore
 ### 7. Verify the build
 
 ```bash
-bun manifest frontend build
+bun run build
 ```
 
 You should see output listing built files in `dist/`.
@@ -113,8 +113,6 @@ bun --hot index.ts
 ```
 
 The server watches `frontend/` for changes, rebuilds automatically, and triggers a browser reload via SSE. No second process needed.
-
-**Optional: standalone watcher.** If you run the server separately (e.g., a different runtime), you can use `bun manifest frontend dev` to run only the file watcher. This is not needed for the normal workflow.
 
 ---
 
@@ -374,7 +372,7 @@ When a frontend error occurs, the browser dev tools trace it back to the origina
 
 ## How Dev Reload Works
 
-The template `index.html` includes a dev reload script that connects to `/__dev/reload` via Server-Sent Events. When `bun manifest frontend dev` rebuilds files, it sends a reload event through this SSE endpoint and the browser refreshes automatically.
+The template `index.html` includes a dev reload script that connects to `/__dev/reload` via Server-Sent Events. When the server rebuilds files (on change during `bun --hot index.ts`), it sends a reload event through this SSE endpoint and the browser refreshes automatically.
 
 The script only activates on `localhost` — it does nothing in production.
 
@@ -392,7 +390,7 @@ When the frontend isn't working, run through these checks in order.
 
 ### Build fails or produces no output
 
-1. Run `bun manifest frontend build` and read the error output.
+1. Run `bun run build` and read the error output.
 2. Check that `config/frontend.ts` exists and has `entryPoint: 'frontend/index.tsx'` (note `.tsx`, not `.ts`).
 3. Check that `frontend/index.tsx` exists — if the entry point is missing, the build has nothing to bundle.
 
@@ -409,7 +407,7 @@ This means SolidJS's reactivity isn't wired up correctly. Common causes:
 3. Check that `@tailwindcss/cli` is installed: `bun pm ls | grep @tailwindcss/cli`. If missing, run `bun add @tailwindcss/cli`.
 4. Check that `frontend/styles.css` contains both `@import "tailwindcss";` and `@source "../dist";`. Without `@source`, Tailwind CLI won't scan the built JS for class names.
 5. Check that `index.html` has a `<link>` to the built CSS: `<link rel="stylesheet" href="/index.css">`.
-6. Run `bun manifest frontend build` and verify `dist/index.css` contains actual utility classes: `grep 'bg-' dist/index.css`.
+6. Run `bun run build` and verify `dist/index.css` contains actual utility classes: `grep 'bg-' dist/index.css`.
 7. SolidJS uses `class`, not `className`. If you wrote `className="..."`, it won't apply Tailwind classes.
 
 ### Dev reload not working
@@ -422,7 +420,7 @@ This means SolidJS's reactivity isn't wired up correctly. Common causes:
 ### Static assets in public/ not served
 
 1. Check that files are in `frontend/public/`, not `frontend/` directly.
-2. Run `bun manifest frontend build` and check that files appear in `dist/`.
+2. Run `bun run build` and check that files appear in `dist/`.
 3. Reference assets with absolute paths (`/images/logo.png`), not relative (`images/logo.png`).
 
 ### SPA routing returns 404
