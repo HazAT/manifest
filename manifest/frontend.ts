@@ -37,14 +37,21 @@ export async function buildFrontend(projectDir: string): Promise<BuildResult> {
   const entryPoint = path.resolve(projectDir, config.entryPoint)
   const isProd = process.env.NODE_ENV === 'production'
 
-  const result = await Bun.build({
-    entrypoints: [entryPoint],
-    outdir: outDir,
-    target: 'browser',
-    sourcemap: config.sourceMaps ? 'linked' : 'none',
-    minify: isProd,
-    naming: '[dir]/[name].[ext]',
-  })
+  let result: Awaited<ReturnType<typeof Bun.build>>
+  try {
+    result = await Bun.build({
+      entrypoints: [entryPoint],
+      outdir: outDir,
+      target: 'browser',
+      sourcemap: config.sourceMaps ? 'linked' : 'none',
+      minify: isProd,
+      naming: '[dir]/[name].[ext]',
+    })
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error(`  Build error: ${msg}`)
+    return { success: false, outputs: [], errors: [msg] }
+  }
 
   // Copy HTML files from frontend/ to outDir
   if (config.copyHtml !== false) {
@@ -98,9 +105,21 @@ export async function buildFrontend(projectDir: string): Promise<BuildResult> {
   return { success: true, outputs, errors: [] }
 }
 
+// Module-level state for watch deduplication (survives hot reload)
+let _watchActive = false
+let _buildInProgress = false
+
 export async function watchFrontend(projectDir: string, onRebuild?: () => void) {
+  // Prevent duplicate watchers from hot reload re-executing this
+  if (_watchActive) return
+  _watchActive = true
+
   const config = await loadConfig(projectDir)
-  await buildFrontend(projectDir)
+  try {
+    await buildFrontend(projectDir)
+  } catch (err) {
+    console.error('[frontend] initial build failed:', err instanceof Error ? err.message : err)
+  }
   console.log('[frontend] watching for changes...')
 
   const frontendDir = path.resolve(projectDir, 'frontend')
@@ -109,11 +128,19 @@ export async function watchFrontend(projectDir: string, onRebuild?: () => void) 
   const scheduleRebuild = () => {
     if (timeout) clearTimeout(timeout)
     timeout = setTimeout(async () => {
-      const start = performance.now()
-      const result = await buildFrontend(projectDir)
-      const ms = Math.round(performance.now() - start)
-      console.log(`[frontend] rebuilt in ${ms}ms`)
-      if (result.success && onRebuild) onRebuild()
+      if (_buildInProgress) return
+      _buildInProgress = true
+      try {
+        const start = performance.now()
+        const result = await buildFrontend(projectDir)
+        const ms = Math.round(performance.now() - start)
+        console.log(`[frontend] rebuilt in ${ms}ms`)
+        if (result.success && onRebuild) onRebuild()
+      } catch (err) {
+        console.error('[frontend] rebuild failed:', err instanceof Error ? err.message : err)
+      } finally {
+        _buildInProgress = false
+      }
     }, 100)
   }
 
