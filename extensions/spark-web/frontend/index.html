@@ -334,6 +334,22 @@
 
   .tool-call .tool-result.error { color: #ef4444; }
 
+  .tool-call-skill { border-color: rgba(255, 176, 0, 0.3); }
+  .tool-call-skill summary { border-left-color: #ffb000; }
+  .tool-call-skill summary:hover { border-left-color: #ffcc40; }
+  .tool-call-skill .skill-badge {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 1px 6px;
+    border-radius: 3px;
+    background: rgba(255, 176, 0, 0.1);
+    color: #ffb000;
+    border: 1px solid rgba(255, 176, 0, 0.25);
+    margin-right: 4px;
+  }
+
   .error-card {
     background: #1a0a0a;
     border: 1px solid rgba(239, 68, 68, 0.3);
@@ -689,6 +705,7 @@
   let currentThinkingEl = null;
   let currentToolCalls = {};
   let streamingToolCall = null;
+  let pendingToolCalls = {};
 
   // Track messages sent by this client.
   // Non-queued: rendered immediately in chat, echo suppressed.
@@ -837,7 +854,10 @@
       if (streamingToolCall) streamingToolCall.argsBuffer += (event.delta || '');
     } else if (event.type === 'toolcall_end') {
       if (streamingToolCall) {
-        createToolCallEl(streamingToolCall.id || event.toolCallId, streamingToolCall.name || event.toolName, streamingToolCall.argsBuffer);
+        var tcId = streamingToolCall.id || event.toolCallId;
+        if (tcId) {
+          pendingToolCalls[tcId] = { name: streamingToolCall.name || event.toolName, args: streamingToolCall.argsBuffer };
+        }
         streamingToolCall = null;
       }
     }
@@ -846,13 +866,32 @@
   function handleToolStart(data) {
     const id = data.toolCallId;
     if (!currentToolCalls[id]) {
-      createToolCallEl(id, data.toolName, typeof data.args === 'string' ? data.args : JSON.stringify(data.args, null, 2));
+      var argsStr = typeof data.args === 'string' ? data.args : JSON.stringify(data.args, null, 2);
+      var pending = pendingToolCalls[id];
+      if (pending) {
+        // Use pending streaming data if richer, prefer execution name
+        if (!argsStr || argsStr === '{}') argsStr = pending.args;
+        delete pendingToolCalls[id];
+      }
+      createToolCallEl(id, data.toolName || (pending && pending.name) || '', argsStr);
+    }
+  }
+
+  function isSkillRead(name, argsStr) {
+    if (name !== 'Read') return false;
+    try {
+      var parsed = JSON.parse(argsStr);
+      var filePath = parsed.path || '';
+      return filePath.indexOf('SKILL.md') !== -1 || /\/skills\//.test(filePath);
+    } catch {
+      return argsStr && (argsStr.indexOf('SKILL.md') !== -1 || /\/skills\//.test(argsStr));
     }
   }
 
   function createToolCallEl(id, name, argsStr) {
     const details = document.createElement('details');
-    details.className = 'tool-call';
+    var skill = isSkillRead(name, argsStr);
+    details.className = skill ? 'tool-call tool-call-skill' : 'tool-call';
     let argsPreview = '';
     try {
       const parsed = JSON.parse(argsStr);
@@ -862,7 +901,8 @@
       }
     } catch { argsPreview = argsStr ? (argsStr.length > 80 ? argsStr.slice(0, 80) + '…' : argsStr) : ''; }
     const summary = document.createElement('summary');
-    summary.innerHTML = '<span class="tool-name">' + escapeHtml(name || '?') + '</span> <span class="tool-args">' + escapeHtml(argsPreview) + '</span>';
+    var prefix = skill ? '<span class="skill-badge">📖 skill</span>' : '';
+    summary.innerHTML = prefix + '<span class="tool-name">' + escapeHtml(name || '?') + '</span> <span class="tool-args">' + escapeHtml(argsPreview) + '</span>';
     const resultDiv = document.createElement('div');
     resultDiv.className = 'tool-result';
     resultDiv.textContent = 'Running...';
@@ -879,6 +919,7 @@
   }
 
   function handleToolEnd(data) {
+    delete pendingToolCalls[data.toolCallId];
     const tc = currentToolCalls[data.toolCallId];
     if (tc) {
       let text = '';
@@ -1119,7 +1160,35 @@
       if (/^(javascript|data|vbscript):/i.test(url)) return match;
       return '<a href="' + url + '" target="_blank" rel="noopener">' + text + '</a>';
     });
+    // Auto-link bare URLs not already inside tags or code blocks
+    html = autoLinkUrls(html);
     return html;
+  }
+
+  function autoLinkUrls(html) {
+    // Split on HTML tags to avoid linking URLs inside <a href="...">, <code>, <pre>
+    var parts = html.split(/(<[^>]+>)/);
+    var inCode = 0;
+    var inAnchor = 0;
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i];
+      if (part.charAt(0) === '<') {
+        var lower = part.toLowerCase();
+        if (lower.indexOf('<pre') === 0 || lower.indexOf('<code') === 0) inCode++;
+        else if (lower.indexOf('</pre') === 0 || lower.indexOf('</code') === 0) inCode = Math.max(0, inCode - 1);
+        if (lower.indexOf('<a ') === 0) inAnchor++;
+        else if (lower.indexOf('</a') === 0) inAnchor = Math.max(0, inAnchor - 1);
+        continue;
+      }
+      if (inCode > 0 || inAnchor > 0) continue;
+      parts[i] = part.replace(/(https?:\/\/[^\s<\[\]"']+)/g, function(url) {
+        // Trim trailing punctuation that's unlikely part of the URL
+        var clean = url.replace(/[.,;:!?)]+$/, '');
+        var trailing = url.slice(clean.length);
+        return '<a href="' + clean + '" target="_blank" rel="noopener">' + clean + '</a>' + trailing;
+      });
+    }
+    return parts.join('');
   }
 
   function escapeHtml(str) {
