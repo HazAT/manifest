@@ -24,7 +24,6 @@ The upstream repo evolves the framework, CLI, docs, skills, and conventions. You
 
 **Accept from upstream:**
 - Framework code improvements (`manifest/`)
-- CLI enhancements (`manifest/cli/`)
 - Prompt and skill text refinements (`.claude/skills/`, `AGENTS.md` framework sections)
 - Documentation polish and typo fixes
 - New conventions that don't break existing patterns
@@ -36,7 +35,6 @@ The upstream repo evolves the framework, CLI, docs, skills, and conventions. You
 - `schemas/` — your data model
 - `services/` — your business logic
 - `config/` — your configuration choices
-- `MANIFEST.md` — regenerated from YOUR project, not upstream
 - Application-specific sections of `AGENTS.md`
 - Any custom extensions you've built
 
@@ -62,21 +60,7 @@ git diff --name-only --diff-filter=U
 cat .git/CHERRY_PICK_HEAD 2>/dev/null && git log --oneline -1 $(cat .git/CHERRY_PICK_HEAD)
 ```
 
-### 2. Read MANIFEST.md
-
-Check the current project index to understand what the app looks like right now:
-
-```bash
-cat MANIFEST.md
-```
-
-Pay attention to:
-- What features exist — these are the app's behaviors, they must be preserved
-- What extensions are installed — these represent deliberate choices
-- What schemas exist — this is the data model, it's authoritative
-- Recent changes — context for what was being worked on
-
-### 3. Understand the Divergence
+### 2. Understand the Divergence
 
 Look at what the cherry-picked commit does and how it relates to your `main` branch:
 
@@ -90,7 +74,7 @@ git log --oneline -10 HEAD
 
 Read the commit message — it tells you the *intent* behind the change. In Manifest, commit messages are knowledge transfer — use them.
 
-### 4. Categorize Each Conflicted File
+### 3. Categorize Each Conflicted File
 
 For every conflicted file, decide which category it falls into:
 
@@ -128,14 +112,10 @@ For `AGENTS.md`: upstream may have improved the framework sections (How to Write
 
 For skills: upstream may have refined prompts, added better examples, or fixed instructions. These are generally safe to accept — they're improvements to the tooling, not changes to your app.
 
-**Category D: Generated files (`MANIFEST.md`, `bun.lockb`)**
-These get regenerated. Don't waste time resolving them manually.
+**Category D: Lockfile (`bun.lockb`)**
+Reinstall after resolving — don't resolve manually.
 
 ```bash
-# For MANIFEST.md — regenerate after resolving everything else
-git checkout --ours MANIFEST.md
-
-# For lockfile — reinstall after resolving
 git checkout --theirs bun.lockb 2>/dev/null || true
 ```
 
@@ -146,7 +126,7 @@ Always keep yours. No exceptions.
 git checkout --ours VISION.md
 ```
 
-### 5. Resolve Each Conflict
+### 4. Resolve Each Conflict
 
 Work through files one at a time. For each:
 
@@ -172,7 +152,7 @@ Their version of this section
 >>>>>>> <commit-hash> (theirs — cherry-picked from manifest)
 ```
 
-### 6. Handle AGENTS.md Specifically
+### 5. Handle AGENTS.md Specifically
 
 `AGENTS.md` is the most common and trickiest conflict. It has framework docs AND project docs in one file.
 
@@ -191,7 +171,7 @@ Their version of this section
 
 When in doubt: if a change makes the documentation more accurate or clear without changing what the app does, accept it.
 
-### 7. Regenerate and Verify
+### 6. Verify
 
 After resolving all conflicts:
 
@@ -199,21 +179,14 @@ After resolving all conflicts:
 # Reinstall dependencies (in case package.json or lockfile changed)
 bun install
 
-# Regenerate the manifest index from YOUR project
-bun run manifest index
-
-# Stage the regenerated file
-git add MANIFEST.md
-
 # Run all checks
 bun test
 bunx tsc --noEmit
-bun run manifest check
 ```
 
-All three must pass before completing the cherry-pick.
+Both must pass before completing the cherry-pick.
 
-### 8. Complete the Cherry-Pick
+### 7. Complete the Cherry-Pick
 
 ```bash
 # Stage all resolved files
@@ -234,7 +207,6 @@ Add a note in the body explaining what you accepted, adapted, and rejected:
 ```
 Accepted:
 - manifest/server.ts: improved error handling for streams
-- manifest/cli/check.ts: new convention checks
 
 Protected (kept ours):
 - features/*: all application features preserved as-is
@@ -244,7 +216,7 @@ Adapted:
 - AGENTS.md: accepted framework doc improvements, kept our
   custom architecture section and extension docs
 
-All tests pass. tsc clean. manifest check clean.
+All tests pass. tsc clean.
 ```
 
 ---
@@ -256,10 +228,9 @@ All tests pass. tsc clean. manifest check clean.
 3. **Framework improvements are welcome.** Better code in `manifest/` is a gift — accept it unless it breaks your customizations.
 4. **Prompt and doc polish is safe.** Refined wording in skills, AGENTS.md framework sections, and README is almost always an improvement. Accept it.
 5. **Config is yours.** Your `config/` reflects your deployment, your secrets, your choices. Keep it.
-6. **MANIFEST.md is never merged.** It's regenerated from your project. Always.
-7. **When you don't know, ask the user.** If a conflict is ambiguous — both sides made meaningful changes and you can't tell which matters more — present both versions and ask.
-8. **Test after resolving.** No cherry-pick is complete until `bun test`, `tsc`, and `manifest check` all pass.
-9. **Document what you did.** The commit should list what was accepted, protected, and adapted so the next update knows the decisions you made.
+6. **When you don't know, ask the user.** If a conflict is ambiguous — both sides made meaningful changes and you can't tell which matters more — present both versions and ask.
+7. **Test after resolving.** No cherry-pick is complete until `bun test` and `tsc` pass.
+8. **Document what you did.** The commit should list what was accepted, protected, and adapted so the next update knows the decisions you made.
 
 ---
 

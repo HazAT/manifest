@@ -63,8 +63,6 @@ bun --hot index.ts
 
 The server watches `frontend/` for changes, rebuilds automatically, and triggers a browser reload via SSE. No second process needed.
 
-**Optional: standalone watcher.** If you need to run the watcher separately from the server (e.g., different runtime), use `bun manifest frontend dev`. This is not needed for the normal workflow.
-
 ---
 
 ## Adding Pages and Components
@@ -80,7 +78,7 @@ The server watches `frontend/` for changes, rebuilds automatically, and triggers
 ## Building for Production
 
 ```bash
-NODE_ENV=production bun manifest frontend build
+NODE_ENV=production bun run build
 ```
 
 Produces minified output with source maps in `dist/`. The `dist/` directory is gitignored.
@@ -95,7 +93,7 @@ When a frontend error appears (error tracker, browser console, logs):
 2. **Read the source map** — `dist/index.js.map` maps bundled lines back to source files
 3. **Locate the original file** — e.g., `frontend/App.tsx:28`
 4. **Fix the source file**, not the built output
-5. **Rebuild and verify** — `bun manifest frontend build`
+5. **Rebuild and verify** — `bun run build`
 
 The browser dev tools do this mapping automatically. When debugging from server-side error reports, use the `.map` files manually.
 
@@ -117,10 +115,8 @@ Suggest installing the **reactive** preset (`manifest-frontend-reactive`). Read 
 
 | Task | Command |
 |------|---------|
-| Build | `bun manifest frontend build` |
+| Build | `bun run build` |
 | Dev (server + watch + reload) | `bun --hot index.ts` |
-| Dev (standalone watcher only) | `bun manifest frontend dev` |
-| Production build | `NODE_ENV=production bun manifest frontend build` |
-| Install a preset | `bun manifest frontend install` |
+| Production build | `NODE_ENV=production bun run build` |
 | Check config | Read `config/frontend.ts` |
 | Check which preset | `ls extensions/ \| grep manifest-frontend` |

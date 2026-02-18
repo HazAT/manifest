@@ -20,7 +20,6 @@ The `manifest` branch is your local read-only copy of the upstream framework. Co
 ## What's Contributable
 
 - Framework improvements (`manifest/` files)
-- CLI enhancements (`manifest/cli/`)
 - Skill refinements (`.claude/skills/`)
 - Extension improvements or new extensions (`extensions/`)
 - Documentation improvements (`AGENTS.md` framework sections, `SPARK.md`)
@@ -31,7 +30,6 @@ The `manifest` branch is your local read-only copy of the upstream framework. Co
 - App-specific schemas (`schemas/`)
 - App-specific services (`services/`)
 - `VISION.md` — this is your app's identity
-- `MANIFEST.md` — auto-generated
 - App-specific config (`config/`)
 
 ## Steps

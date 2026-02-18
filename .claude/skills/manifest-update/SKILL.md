@@ -102,8 +102,7 @@ Group commits by the area they touch:
 
 | Area | Path pattern | Description |
 |------|-------------|-------------|
-| **Framework** | `manifest/` (excluding `manifest/cli/`) | Core framework improvements |
-| **CLI** | `manifest/cli/` | Command enhancements |
+| **Framework** | `manifest/` | Core framework improvements |
 | **Skills** | `.claude/skills/` | Prompt and workflow refinements |
 | **Docs** | `AGENTS.md`, `SPARK.md`, `README.md` | Documentation updates |
 | **Extensions** | `extensions/` | New or updated extensions |
