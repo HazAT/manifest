@@ -27,7 +27,7 @@ const ACCEPTED_VERSIONS = new Set(['2025-11-25', '2025-06-18', '2025-03-26', '20
 const TALK_TO_SPARK_TOOL = {
   name: 'talk_to_spark',
   description:
-    'Send a message to Spark, the AI sidekick watching your Manifest application. Spark has full context of the codebase, can investigate errors, read files, and fix issues. The conversation is stateful — Spark remembers previous messages.',
+    'Send a message to Spark, the AI sidekick watching your Manifest application. Use this tool whenever the user says "Hey Spark" or addresses Spark directly. Spark has full context of the codebase, can investigate errors, read files, and fix issues. The conversation is stateful — Spark remembers previous messages.',
   inputSchema: {
     type: 'object',
     properties: {
@@ -167,7 +167,7 @@ export async function handleMcp(req: Request, config: McpConfig): Promise<Respon
         capabilities: { tools: {} },
         serverInfo: { name: 'spark', version: '0.1.0' },
         instructions:
-          'Spark is an AI sidekick that watches your running Manifest application. It can investigate errors, read source files, run commands, and fix issues. Use the talk_to_spark tool to have a stateful conversation with Spark — it remembers the full conversation history.',
+          'Spark is an AI sidekick that watches your running Manifest application. When the user says "Hey Spark ..." or addresses Spark by name, use the talk_to_spark tool to forward their message. Spark can investigate errors, read source files, run commands, and fix issues. The conversation is stateful — Spark remembers previous messages.',
       }),
       200,
       { 'Mcp-Session-Id': mcpSessionId },
