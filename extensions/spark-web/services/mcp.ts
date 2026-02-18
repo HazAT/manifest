@@ -19,7 +19,6 @@ const RPC_PARSE_ERROR = -32700
 const RPC_INVALID_REQUEST = -32600
 const RPC_METHOD_NOT_FOUND = -32601
 const RPC_INVALID_PARAMS = -32602
-const RPC_INTERNAL_ERROR = -32603
 
 /** Accepted MCP protocol versions. */
 const ACCEPTED_VERSIONS = new Set(['2025-03-26', '2024-11-05'])
@@ -197,11 +196,9 @@ export async function handleMcp(req: Request, config: McpConfig): Promise<Respon
 
     /** Write one SSE event (unnamed, as per MCP spec). */
     const writeEvent = (data: unknown) => {
-      try {
-        writer.write(enc.encode(`data: ${JSON.stringify(data)}\n\n`))
-      } catch {
+      writer.write(enc.encode(`data: ${JSON.stringify(data)}\n\n`)).catch(() => {
         // client disconnected
-      }
+      })
     }
 
     // Run async in background so we can return the Response immediately
@@ -212,9 +209,20 @@ export async function handleMcp(req: Request, config: McpConfig): Promise<Respon
       try {
         // Buffer text tokens so we can accumulate the final response
         let accumulatedText = ''
+        // When the session is already streaming, we subscribe before our
+        // message starts. Skip events from the current turn until we see
+        // a fresh message_start that belongs to our follow-up.
+        let active = !config.session.isStreaming
 
         unsubscribe = config.session.subscribe((event: any) => {
           if (finished) return
+
+          if (!active) {
+            if (event.type === 'message_start') {
+              active = true
+            }
+            return
+          }
 
           switch (event.type) {
             case 'message_update': {
