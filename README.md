@@ -67,7 +67,7 @@ If something happens, it's because the code says so. Not because a middleware wa
 
 **3. Self-describing code.**
 
-Every feature carries machine-readable metadata: what it does, what it depends on, what it affects. The codebase is its own documentation. An agent dropping in cold reads `MANIFEST.md` and orients itself in seconds.
+Every feature carries machine-readable metadata: what it does, what it depends on, what it affects. The codebase is its own documentation. An agent dropping in cold reads `AGENTS.md` and orients itself in seconds.
 
 ---
 
@@ -176,8 +176,7 @@ manifest/
 ├── envelope.ts      # Response formatting
 ├── scanner.ts       # Feature directory scanner
 ├── testing.ts       # Test client
-├── index.ts         # Barrel exports
-└── cli/             # serve, index, check, make:feature
+└── index.ts         # Barrel exports
 ```
 
 An agent reads the entire framework in seconds. It doesn't just use Manifest — it *understands* Manifest. When something breaks, the agent doesn't search Stack Overflow. It reads `manifest/router.ts` and fixes the routing. It reads `manifest/validator.ts` and adds a new validation rule.
@@ -240,24 +239,6 @@ expect(result.status).toBe(201)
 
 Call features by name. No HTTP overhead. No port conflicts. Fast, deterministic tests.
 
-### MANIFEST.md — The Agent's Entry Point
-
-Every Manifest project has a `MANIFEST.md` at the root. Auto-generated. Always in sync. It's the first thing any agent reads:
-
-```markdown
-## Feature Index
-| Name | Route | Type | Description |
-|------|-------|------|-------------|
-| user-registration | POST /api/users/register | request | Creates new account |
-| user-login | POST /api/users/login | request | Authenticates user |
-| post-feed | GET /api/posts/feed | stream | Real-time post stream |
-```
-
-```bash
-bun run manifest index    # Regenerate MANIFEST.md
-bun run manifest check    # Validate conventions
-```
-
 ---
 
 ## The Agentic Loop
@@ -267,7 +248,7 @@ This is what Manifest is built for:
 ```
 Error tracker fires alert
         ↓
-Agent reads MANIFEST.md → orients
+Agent reads AGENTS.md → orients
         ↓
 Agent reads the feature file → understands the full behavior
         ↓
@@ -298,7 +279,6 @@ Every design decision in Manifest exists to make this loop fast, safe, and relia
 
 ```
 manifest-app/
-├── MANIFEST.md             # Auto-generated. The agent reads this first.
 ├── manifest/               # THE FRAMEWORK. Source code.
 ├── features/               # One file per behavior. This IS the app.
 │   ├── UserRegistration.ts
@@ -338,19 +318,6 @@ The `features/` directory **is** the application. Everything else is infrastruct
 | Elysia | Decorator-heavy, method chaining — behavior emerges from composition, not declaration |
 
 Manifest has no middleware. No decorators. No DI container. No file-system routing. No convention-based auto-discovery. Every behavior is a `defineFeature()` call in a single file that the agent reads top to bottom.
-
----
-
-## CLI
-
-```bash
-bun run manifest serve              # Start server (use bun --hot for live reload)
-bun run manifest index              # Regenerate MANIFEST.md
-bun run manifest check              # Validate conventions
-bun run manifest make:feature Name  # Scaffold a new feature
-```
-
-The CLI is plain TypeScript. No framework. Just `process.argv`.
 
 ---
 
@@ -396,11 +363,7 @@ curl http://localhost:8080/api/hello?name=World
 
 ### Create a new feature
 
-```bash
-bun run manifest make:feature CreatePost --route="POST /api/posts" --auth=required
-```
-
-This scaffolds `features/CreatePost.ts` with the full structure and TODO markers. Fill in the blanks.
+Create a new file in `features/` using the `defineFeature()` pattern. Follow the conventions in `AGENTS.md` — route, input fields, side effects, error cases, linear handle logic. That's all there is to it.
 
 ### Run tests
 
@@ -494,14 +457,7 @@ extensions/
 
 ### Managing extensions
 
-```bash
-bun run manifest extension install <source>   # Install an extension
-bun run manifest extension list               # List installed extensions
-bun run manifest extension make <name>        # Scaffold a new extension
-bun run manifest index                        # Rebuild the manifest
-```
-
-The scanner picks up features from `extensions/*/features/`. They show up in `MANIFEST.md`. They follow the same conventions. `bun manifest check` validates them the same way.
+Extensions are just directories — read an extension's `EXTENSION.md` and follow its setup instructions. The scanner picks up features from `extensions/*/features/` automatically. They follow the same `defineFeature()` conventions as any feature you write yourself.
 
 ### Shipped extensions
 
@@ -515,7 +471,7 @@ The scanner picks up features from `extensions/*/features/`. They show up in `MA
 
 ### EXTENSION.md
 
-Every extension has an `EXTENSION.md` — the agent's guide to the extension, like `MANIFEST.md` is the guide to the app:
+Every extension has an `EXTENSION.md` — the agent's guide to the extension:
 
 ```markdown
 # Auth Extension

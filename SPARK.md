@@ -47,7 +47,7 @@ fi
 
 **If the output is `ALREADY_SETUP`** — someone already ran Spark (or set it up manually). The project has been renamed and personalized. Don't run the full onboarding. Instead, say:
 
-> Looks like Manifest is already set up here. The framework is in `manifest/`, features are in `features/`, and `MANIFEST.md` exists.
+> Looks like Manifest is already set up here. The framework is in `manifest/`, features are in `features/`.
 >
 > Spark is just the setup guide — there's no magic beyond getting you started. If you want to run through the setup again anyway, say the word. Otherwise, read `CLAUDE.md` for conventions and start building. You've got everything you need.
 
@@ -288,7 +288,7 @@ Show the user the JSON response. Then:
 
 ```bash
 # Build the frontend first
-bun manifest frontend build
+bun run build
 
 # Start server and check the frontend is served
 bun index.ts > /dev/null 2>&1 &
@@ -316,12 +316,11 @@ If anything fails, investigate and fix before moving on.
 
 This is the one step where you DON'T do the work. The user needs to read.
 
-> Now read these four things. In this order. Don't skim.
+> Now read these three things. In this order. Don't skim.
 >
 > 1. `VISION.md` — your app's vision. What you're building and why. This is the first thing any agent reads. (If you skipped writing it earlier, that's fine — come back to it when you're ready.)
-> 2. `MANIFEST.md` — the index of everything in your project. Auto-generated. This is what an agent reads to orient itself.
-> 3. `CLAUDE.md` — the conventions and rules for working in this project. This is how you (and any agent) should write code here.
-> 4. `features/HelloWorld.ts` — your first feature. This is the pattern everything follows.
+> 2. `CLAUDE.md` — the conventions and rules for working in this project. This is how you (and any agent) should write code here.
+> 3. `features/HelloWorld.ts` — your first feature. This is the pattern everything follows.
 
 **If a frontend was installed in Step 3**, add to the reading list:
 
@@ -351,7 +350,7 @@ Give them a moment. Then:
 | `manifest-sse-example` | SSE streaming example |
 | `spark` | Reactive error watching sidekick |
 
-If an extension exists that handles part or all of what the user wants, install it with `bun manifest extension install [name]`, read its `EXTENSION.md`, and follow its instructions instead of building from scratch. Don't reinvent what's already packaged.
+If an extension exists that handles part or all of what the user wants, read its `EXTENSION.md` and follow its setup instructions instead of building from scratch. Don't reinvent what's already packaged.
 
 ### Migrating an Existing Site
 
@@ -381,11 +380,7 @@ The Spark sidekick runs as a [Pi](https://github.com/badlogic/pi-mono/tree/main/
 bunx pi --version 2>/dev/null || npx pi --version 2>/dev/null || pi --version 2>/dev/null
 ```
 
-**If Pi is available**, initialize the sidekick:
-
-```bash
-bun manifest spark init
-```
+**If Pi is available**, set up the sidekick. Read `extensions/spark/EXTENSION.md` and follow its setup instructions exactly — it covers creating `config/spark.ts`, adding the extension to `.pi/settings.json`, and adding `.spark/` to `.gitignore`.
 
 Tell the user:
 
@@ -395,14 +390,14 @@ Tell the user:
 
 Don't belabor this. The sidekick is a background capability, not a ceremony.
 
-**If Pi is NOT available**, skip `spark init` and tell the user:
+**If Pi is NOT available**, skip setup and tell the user:
 
 > Manifest comes with Spark — an AI sidekick that watches your running app and reacts to errors in real time. It needs [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) to run, which I don't see installed yet.
 >
 > When you're ready to set it up:
 > 1. Install Pi: `npm install -g @mariozechner/pi-coding-agent`
 > 2. Run `pi` once to configure your LLM API key (Anthropic, OpenAI, etc.)
-> 3. Then run `bun manifest spark init` in this project
+> 3. Read `extensions/spark/EXTENSION.md` and follow its setup instructions
 > 4. Start a fresh Pi session — Spark will load automatically
 >
 > This is optional — your project works fine without it. But once it's running, you'll wonder how you ever built without an agent watching your back.
@@ -427,30 +422,29 @@ Go back to what the user said they're building in the beginning. Decide which pa
 
 If you're one-shotting it:
 
-1. Scaffold each feature: `bun run manifest make:feature [Name] --route="[METHOD] /api/[path]"`
+1. Create each feature file in `features/` using `defineFeature()` — follow the conventions in `AGENTS.md`
 2. Write the full implementation for each feature file
 3. Write test files for each feature
 4. Run `bun test` — make sure everything passes
-5. Run `bun run manifest index` and `bun run manifest check`
-6. Walk the user through what you built — explain the patterns, point out the descriptions, the side effects, the error cases
+5. Walk the user through what you built — explain the patterns, point out the descriptions, the side effects, the error cases
 
 Then hand off:
 
 > That's your project — [N] features, tested and indexed.
 >
-> **Start a fresh session before you keep building.** When a new session starts, it loads everything cleanly — `CLAUDE.md` for conventions and available skills. If you set up Spark in the previous step, the sidekick extension also loads and proactively orients itself — reading `MANIFEST.md`, `AGENTS.md`, and skimming your feature files so it understands the codebase before any errors come in.
+> **Start a fresh session before you keep building.** When a new session starts, it loads everything cleanly — `CLAUDE.md` for conventions and available skills. If you set up Spark in the previous step, the sidekick extension also loads and proactively orients itself — reading `AGENTS.md` and skimming your feature files so it understands the codebase before any errors come in.
 
 ### Path B: Hand Off
 
 If the project needs real architecture work:
 
-> Your Manifest project is set up: framework, config, tests passing, manifest indexed. Here's what to do next:
+> Your Manifest project is set up: framework, config, tests passing. Here's what to do next:
 >
-> 1. **Start a fresh session in this directory.** This is important — a new session loads everything cleanly: `CLAUDE.md` for conventions and available skills. If you set up Spark in the previous step, the sidekick extension also loads and proactively orients itself — reading `MANIFEST.md`, `AGENTS.md`, and skimming feature files so the agent knows your project before you even ask it to do anything.
+> 1. **Start a fresh session in this directory.** This is important — a new session loads everything cleanly: `CLAUDE.md` for conventions and available skills. If you set up Spark in the previous step, the sidekick extension also loads and proactively orients itself — reading `AGENTS.md` and skimming feature files so the agent knows your project before you even ask it to do anything.
 > 2. Tell it what you're building. It has the full context of how Manifest works — one feature per file, explicit inputs, declared side effects.
-> 3. Let it scaffold features with `bun manifest make:feature` and build from there.
+> 3. Start building: create feature files using `defineFeature()` and follow the conventions in `AGENTS.md`.
 >
-> The framework is ~3,100 lines in `manifest/`. The conventions are in `CLAUDE.md`. The index is in `MANIFEST.md`. Everything the next agent needs is already here.
+> The framework is ~3,100 lines in `manifest/`. The conventions are in `AGENTS.md`. Everything the next agent needs is already here.
 
 ---
 
