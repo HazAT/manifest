@@ -1,6 +1,7 @@
 import path from 'path'
 import fs from 'fs'
 import crypto from 'crypto'
+import { handleMcp } from './mcp'
 
 /**
  * Config shape for Spark Web sidecar. Mirrors config/spark.ts with projectDir added.
@@ -329,6 +330,7 @@ export async function startSparkSidecar(config: SparkSidecarConfig): Promise<voi
   try {
     const server = Bun.serve({
       port: config.web.port,
+      idleTimeout: 255, // seconds — max Bun allows; keeps SSE streams alive
       fetch(req, server) {
         const url = new URL(req.url)
         const pathname = url.pathname
@@ -412,6 +414,11 @@ export async function startSparkSidecar(config: SparkSidecarConfig): Promise<voi
           const upgraded = server.upgrade(req, { data: {} } as any)
           if (upgraded) return undefined as any
           return new Response('WebSocket upgrade failed', { status: 500 })
+        }
+
+        // MCP Streamable HTTP endpoint — Bearer token auth, no cookie required
+        if (pathname === '/mcp') {
+          return handleMcp(req, { session, sessionReady, sessionError, token })
         }
 
         return new Response('Not Found', { status: 404 })

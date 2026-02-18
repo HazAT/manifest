@@ -55,7 +55,7 @@ export default {
   // Start it explicitly: SPARK_WEB_TOKEN=xxx bun extensions/spark-web/services/sparkWeb.ts
   // Open:  http://localhost:8081/
   web: {
-    enabled: false,
+    enabled: true,
     port: Number(Bun.env.SPARK_WEB_PORT) || 8081,
     token: Bun.env.SPARK_WEB_TOKEN || '',
     // Additional Pi extensions to load into the Spark agent session.
