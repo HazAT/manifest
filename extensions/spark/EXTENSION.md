@@ -31,14 +31,10 @@ A reactive AI sidekick that watches your Manifest app for errors and injects the
 
 ### 1. Initialize Spark
 
-```bash
-bun run manifest spark init
-```
-
-This does three things:
-- Creates `config/spark.ts` with sensible defaults (if it doesn't exist)
-- Adds the Spark Pi extension path to `.pi/settings.json`
-- Adds process hooks to `index.ts` for uncaught errors
+Set up these three things manually:
+- Create `config/spark.ts` with sensible defaults (copy from the template in this extension)
+- Add `"../extensions/spark/pi-extension"` to the `extensions` array in `.pi/settings.json`
+- Add `.spark/` to `.gitignore`
 
 ### 2. Start Spark
 

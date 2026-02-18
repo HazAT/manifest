@@ -131,10 +131,9 @@ Run standard checks on the contribution branch:
 ```bash
 bun test
 bunx tsc --noEmit
-bun run manifest check
 ```
 
-All three must pass. Fix any issues before proceeding.
+Both must pass. Fix any issues before proceeding.
 
 ### 8. Push and Open PR
 
@@ -224,7 +223,7 @@ The contribution branch stays around until the PR is merged or closed. Don't del
 - **Only contribute framework-level changes.** App code stays local.
 - **Never auto-select commits.** The agent identifies candidates, the user decides.
 - **Always strip app-specific changes** from mixed commits before contributing.
-- **Always verify before pushing.** `bun test`, `bunx tsc --noEmit`, `bun run manifest check`.
+- **Always verify before pushing.** `bun test`, `bunx tsc --noEmit`.
 - **Always use `GIT_EDITOR=true`** when git commands might open an editor.
 - **Write a clear PR description.** The upstream maintainer needs to understand the improvement without context about your specific app.
 - **Never modify the `manifest` branch directly.** Contribution branches are created from it, but it remains a read-only mirror.

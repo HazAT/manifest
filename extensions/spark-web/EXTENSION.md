@@ -225,10 +225,7 @@ Check the full error message in the sidecar's output for specifics.
 
 ### Spark events not appearing in conversation
 
-1. Check that Spark itself is enabled:
-   ```bash
-   bun run manifest spark status
-   ```
+1. Check that Spark is enabled in `config/spark.ts` (`enabled: true`).
 2. Verify events are being written to the database:
    ```bash
    bun -e "import { sparkDb } from './services/sparkDb'; console.log(sparkDb.getRecentEvents(5))"

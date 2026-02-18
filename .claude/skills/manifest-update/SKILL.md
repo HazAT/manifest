@@ -214,10 +214,9 @@ Run the standard checks to make sure nothing broke:
 ```bash
 bun test
 bunx tsc --noEmit
-bun run manifest check
 ```
 
-All three must pass. If something fails, investigate and fix before considering the update complete.
+Both must pass. If something fails, investigate and fix before considering the update complete.
 
 ---
 
@@ -228,6 +227,6 @@ All three must pass. If something fails, investigate and fix before considering 
 - **Always tag after syncing** so the next update knows where to start.
 - **Always use `GIT_EDITOR=true`** when git commands might open an editor.
 - **Always read commits first.** Understand what upstream changed before applying anything.
-- **Always test after cherry-picking.** `bun test`, `bunx tsc --noEmit`, `bun run manifest check`.
+- **Always test after cherry-picking.** `bun test`, `bunx tsc --noEmit`.
 - **Warn about local modifications.** If the user has customized files that upstream also changed, flag it before cherry-picking.
 - **Preserve app identity.** `VISION.md`, user features, user services, and deployment configs are the user's — never overwrite them with upstream versions.
