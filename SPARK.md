@@ -73,7 +73,56 @@ After the user tells you what they're building, guide them through these steps *
 
 ### Step 0: Environment Check
 
-**Before anything else, verify the environment.** Run these checks yourself:
+**Before anything else, verify the environment.**
+
+#### Pi Check
+
+Manifest is built for [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent). Check if it's available:
+
+```bash
+pi --version 2>/dev/null
+```
+
+**Three possible states — handle the one that applies:**
+
+**1. You ARE a Pi agent** (you know this from your system identity — you have `/reload`, subagents, skills, and extensions):
+
+> 👍 You're running Pi — exactly what Manifest is built for. The skills, the Spark sidekick, the project context — it all integrates directly. Let's go.
+
+Move on. **Remember that you're Pi** — you'll use this at the end of setup to reload context instead of telling the user to start a fresh session.
+
+**2. You are NOT Pi, but `pi --version` succeeds** (Pi is installed but the user is using a different agent):
+
+> Manifest is built to work with [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) — a terminal coding agent designed for frameworks like this. You have Pi installed, but you're running a different agent right now.
+>
+> You can continue here — any agent with terminal access can set this up. But you'll miss the tight integration: skills that teach Manifest conventions, the Spark sidekick that watches your running app, and project context that loads automatically every session.
+>
+> If you'd rather switch, start Pi in this directory and paste this prompt again:
+> ```
+> pi
+> ```
+> Otherwise, we keep going.
+
+If they want to continue, proceed. Don't bring it up again.
+
+**3. `pi --version` fails** (Pi is not installed):
+
+> Manifest is built to work with [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) — a terminal coding agent designed for frameworks like this. It's not installed on your system.
+>
+> You can still set up and use Manifest — any agent with terminal access works. But the full experience requires Pi: skills that teach conventions, the Spark sidekick that watches your app for errors, and project context that loads automatically.
+>
+> To install when you're ready:
+> ```bash
+> npm install -g @mariozechner/pi-coding-agent
+> ```
+>
+> Want to install Pi and start there, or continue without it?
+
+If they want to continue, proceed. Don't bring it up again.
+
+#### Bun & Git
+
+Run these checks:
 
 ```bash
 bun --version
@@ -373,14 +422,9 @@ The goal: when the user opens their new Manifest site next to their old site, th
 
 ### Step 5b: Set Up the Spark Sidekick
 
-The Spark sidekick runs as a [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) agent — it needs Pi installed with a working LLM API key. Check first:
+The Spark sidekick runs as a [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) agent — it needs Pi installed with a working LLM API key. You already checked for Pi in Step 0 — use that result here.
 
-```bash
-# Check if Pi is available
-bunx pi --version 2>/dev/null || npx pi --version 2>/dev/null || pi --version 2>/dev/null
-```
-
-**If Pi is available**, set up the sidekick. Read `extensions/spark/EXTENSION.md` and follow its setup instructions exactly — it covers creating `config/spark.ts`, adding the extension to `.pi/settings.json`, and adding `.spark/` to `.gitignore`.
+**If Pi was detected in Step 0** (either you ARE Pi, or `pi --version` succeeded), set up the sidekick. Read `extensions/spark/EXTENSION.md` and follow its setup instructions exactly — it covers creating `config/spark.ts`, adding the extension to `.pi/settings.json`, and adding `.spark/` to `.gitignore`.
 
 Tell the user:
 
@@ -390,7 +434,7 @@ Tell the user:
 
 Don't belabor this. The sidekick is a background capability, not a ceremony.
 
-**If Pi is NOT available**, skip setup and tell the user:
+**If Pi was NOT detected in Step 0**, skip setup and tell the user:
 
 > Manifest comes with Spark — an AI sidekick that watches your running app and reacts to errors in real time. It needs [Pi](https://github.com/badlogic/pi-mono/tree/main/packages/coding-agent) to run, which I don't see installed yet.
 >
@@ -430,6 +474,18 @@ If you're one-shotting it:
 
 Then hand off:
 
+**If you are a Pi agent**, reload context instead of telling the user to start a new session:
+
+> That's your project — [N] features, tested and indexed.
+>
+> Reloading context now — all the skills, extensions, and project conventions are loading fresh.
+
+Then execute `/reload`. After the reload completes, tell the user:
+
+> You're set. The full Manifest context is loaded — `AGENTS.md` for conventions, skills for specialized tasks, and the Spark sidekick if you set it up. Start building.
+
+**If you are NOT a Pi agent:**
+
 > That's your project — [N] features, tested and indexed.
 >
 > **Start a fresh session before you keep building.** When a new session starts, it loads everything cleanly — `CLAUDE.md` for conventions and available skills. If you set up Spark in the previous step, the sidekick extension also loads and proactively orients itself — reading `AGENTS.md` and skimming your feature files so it understands the codebase before any errors come in.
@@ -437,6 +493,20 @@ Then hand off:
 ### Path B: Hand Off
 
 If the project needs real architecture work:
+
+**If you are a Pi agent**, reload context instead of telling the user to start a new session:
+
+> Your Manifest project is set up: framework, config, tests passing.
+>
+> Reloading context now — all the skills, extensions, and project conventions are loading fresh.
+
+Then execute `/reload`. After the reload completes, tell the user:
+
+> You're set. The full Manifest context is loaded — `AGENTS.md` for conventions, skills for specialized tasks, and the Spark sidekick if you set it up.
+>
+> Tell me what you want to build first. I have the full context of how Manifest works — one feature per file, explicit inputs, declared side effects. Let's go.
+
+**If you are NOT a Pi agent:**
 
 > Your Manifest project is set up: framework, config, tests passing. Here's what to do next:
 >
