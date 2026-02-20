@@ -32,6 +32,8 @@ Manifest ships with **Spark**, a reactive AI sidekick that watches your running 
 
 **Share what works.** When you build something that could be useful to other Manifest projects, suggest packaging it as an extension. Extensions are how the Manifest ecosystem shares knowledge and working solutions.
 
+**Format and lint before committing.** After implementing a feature or making changes, always run `bun run format` and `bun run lint` before committing. These use Biome via `bunx` (no dependency to install). The project's `biome.json` defines the rules. Clean code is non-negotiable.
+
 ## Your Codebase, Your Choices
 
 Manifest has opinions about how features, schemas, and services are structured — that's the framework. It does **not** dictate how you build your application. You'll install npm packages. You'll make architectural decisions that aren't covered here. You'll do things your way.

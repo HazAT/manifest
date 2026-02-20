@@ -1,47 +1,57 @@
-import { createManifestServer } from './manifest'
-import sparkConfig from './config/spark'
-import { sparkDb } from './services/sparkDb'
+import sparkConfig from "./config/spark";
+import { createManifestServer } from "./manifest";
+import { sparkDb } from "./services/sparkDb";
+
 // import { auth } from './extensions/manifest-auth/services/auth'
 
 const server = await createManifestServer({
-  projectDir: import.meta.dir,
-  port: Number(Bun.env.PORT ?? 3100),
-  // To enable auth, uncomment the import above and the line below:
-  // authenticate: auth.createAuthResolver(),
-})
+	projectDir: import.meta.dir,
+	port: Number(Bun.env.PORT ?? 3100),
+	// To enable auth, uncomment the import above and the line below:
+	// authenticate: auth.createAuthResolver(),
+});
 
-console.log(`🔧 Manifest server running on http://localhost:${server.port}`)
-console.log(`   Code that watches itself.`)
+console.log(`🔧 Manifest server running on http://localhost:${server.port}`);
+console.log(`   Code that watches itself.`);
 
 // Spark: emit events for unhandled errors via sparkDb
 try {
-  if (sparkConfig.enabled && sparkConfig.watch.unhandledErrors) {
-    let isEmitting = false
-    const emitError = (error: Error) => {
-      if (isEmitting) return // Prevent infinite loop: emit failure → unhandledRejection → emit
-      isEmitting = true
-      try {
-        sparkDb.logEvent({
-          type: 'unhandled-error',
-          traceId: Bun.randomUUIDv7(),
-          error: { message: error.message, stack: error.stack },
-        })
-      } catch {} finally { isEmitting = false }
-    }
+	if (sparkConfig.enabled && sparkConfig.watch.unhandledErrors) {
+		let isEmitting = false;
+		const emitError = (error: Error) => {
+			if (isEmitting) return; // Prevent infinite loop: emit failure → unhandledRejection → emit
+			isEmitting = true;
+			try {
+				sparkDb.logEvent({
+					type: "unhandled-error",
+					traceId: Bun.randomUUIDv7(),
+					error: { message: error.message, stack: error.stack },
+				});
+			} catch {
+			} finally {
+				isEmitting = false;
+			}
+		};
 
-    process.on('uncaughtException', (error) => {
-      try { emitError(error) } catch {}
-    })
+		process.on("uncaughtException", (error) => {
+			try {
+				emitError(error);
+			} catch {}
+		});
 
-    process.on('unhandledRejection', (reason) => {
-      try { emitError(reason instanceof Error ? reason : new Error(String(reason))) } catch {}
-    })
-  }
+		process.on("unhandledRejection", (reason) => {
+			try {
+				emitError(reason instanceof Error ? reason : new Error(String(reason)));
+			} catch {}
+		});
+	}
 
-  // Start periodic cleanup
-  if (sparkConfig.enabled) {
-    setInterval(() => {
-      try { sparkDb.cleanup() } catch {}
-    }, sparkConfig.db.cleanup.intervalMs)
-  }
+	// Start periodic cleanup
+	if (sparkConfig.enabled) {
+		setInterval(() => {
+			try {
+				sparkDb.cleanup();
+			} catch {}
+		}, sparkConfig.db.cleanup.intervalMs);
+	}
 } catch {} // Spark setup must never prevent server from starting

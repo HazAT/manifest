@@ -1,22 +1,22 @@
 {
-  "compilerOptions": {
-    "target": "ESNext",
-    "module": "Preserve",
-    "moduleResolution": "bundler",
-    "moduleDetection": "force",
-    "verbatimModuleSyntax": true,
-    "allowImportingTsExtensions": true,
-    "noEmit": true,
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolveJsonModule": true,
-    "paths": {
-      "manifest": ["./manifest/index.ts"],
-      "manifest/*": ["./manifest/*"]
-    }
-  },
-  "include": ["**/*.ts"],
-  "exclude": ["node_modules", "dist", "extensions/*/templates"]
+	"compilerOptions": {
+		"target": "ESNext",
+		"module": "Preserve",
+		"moduleResolution": "bundler",
+		"moduleDetection": "force",
+		"verbatimModuleSyntax": true,
+		"allowImportingTsExtensions": true,
+		"noEmit": true,
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"paths": {
+			"manifest": ["./manifest/index.ts"],
+			"manifest/*": ["./manifest/*"]
+		}
+	},
+	"include": ["**/*.ts"],
+	"exclude": ["node_modules", "dist", "extensions/*/templates"]
 }

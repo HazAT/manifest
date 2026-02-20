@@ -1,22 +1,22 @@
-import type { InputSchemaDef } from './types'
-import type { RateLimitConfig } from '../services/rateLimiter'
+import type { RateLimitConfig } from "../services/rateLimiter";
+import type { InputSchemaDef } from "./types";
 
 /** Authenticated user resolved from session. Passed to features via HandleContext. */
 export interface AuthUser {
-  id: string
-  email: string
+	id: string;
+	email: string;
 }
 
 /**
  * Standard response envelope returned by feature handlers.
  */
 export interface FeatureResult {
-  success: boolean
-  status: number
-  message: string
-  data: unknown
-  errors: Record<string, string>
-  headers?: Record<string, string>
+	success: boolean;
+	status: number;
+	message: string;
+	data: unknown;
+	errors: Record<string, string>;
+	headers?: Record<string, string>;
 }
 
 /**
@@ -24,47 +24,54 @@ export interface FeatureResult {
  * Provides validated input and ok/fail response helpers.
  */
 export interface HandleContext<TInput = Record<string, unknown>> {
-  input: TInput
-  request: Request
-  user: AuthUser | null
-  ok: (message: string, opts?: { data?: unknown; status?: number; headers?: Record<string, string> }) => FeatureResult
-  fail: (message: string, status?: number) => FeatureResult
+	input: TInput;
+	request: Request;
+	user: AuthUser | null;
+	ok: (
+		message: string,
+		opts?: {
+			data?: unknown;
+			status?: number;
+			headers?: Record<string, string>;
+		},
+	) => FeatureResult;
+	fail: (message: string, status?: number) => FeatureResult;
 }
 
-export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
 /**
  * Options accepted by defineFeature(). Users pass this object to define a feature.
  */
 export interface FeatureOptions<TInput = Record<string, unknown>> {
-  name: string
-  description: string
-  route?: [HttpMethod, string]
-  type?: 'request' | 'event'
-  trigger?: string
-  authentication?: 'none' | 'required' | 'optional'
-  sideEffects?: string[]
-  errorCases?: string[]
-  rateLimit?: RateLimitConfig
-  input: InputSchemaDef
-  handle: (ctx: HandleContext<TInput>) => Promise<FeatureResult>
+	name: string;
+	description: string;
+	route?: [HttpMethod, string];
+	type?: "request" | "event";
+	trigger?: string;
+	authentication?: "none" | "required" | "optional";
+	sideEffects?: string[];
+	errorCases?: string[];
+	rateLimit?: RateLimitConfig;
+	input: InputSchemaDef;
+	handle: (ctx: HandleContext<TInput>) => Promise<FeatureResult>;
 }
 
 /**
  * Resolved feature definition with all defaults applied.
  */
 export interface FeatureDef<TInput = Record<string, unknown>> {
-  name: string
-  description: string
-  route?: [HttpMethod, string]
-  type: 'request' | 'event'
-  trigger?: string
-  authentication: 'none' | 'required' | 'optional'
-  sideEffects: string[]
-  errorCases: string[]
-  rateLimit?: RateLimitConfig
-  input: InputSchemaDef
-  handle: (ctx: HandleContext<TInput>) => Promise<FeatureResult>
+	name: string;
+	description: string;
+	route?: [HttpMethod, string];
+	type: "request" | "event";
+	trigger?: string;
+	authentication: "none" | "required" | "optional";
+	sideEffects: string[];
+	errorCases: string[];
+	rateLimit?: RateLimitConfig;
+	input: InputSchemaDef;
+	handle: (ctx: HandleContext<TInput>) => Promise<FeatureResult>;
 }
 
 // --- Stream feature types ---
@@ -75,8 +82,8 @@ export interface FeatureDef<TInput = Record<string, unknown>> {
  * - emit(event, data) sends a named event with data
  */
 export interface EmitFn {
-  (data: string | object): void
-  (event: string, data: string | object): void
+	(data: string | object): void;
+	(event: string, data: string | object): void;
 }
 
 /**
@@ -84,51 +91,51 @@ export interface EmitFn {
  * Provides validated input and SSE control (emit, close, fail).
  */
 export interface StreamContext<TInput = Record<string, unknown>> {
-  input: TInput
-  request: Request
-  user: AuthUser | null
-  emit: EmitFn
-  close: () => void
-  fail: (message: string) => void
+	input: TInput;
+	request: Request;
+	user: AuthUser | null;
+	emit: EmitFn;
+	close: () => void;
+	fail: (message: string) => void;
 }
 
 /**
  * Options for defining a stream feature. Uses stream() instead of handle().
  */
 export interface StreamFeatureOptions<TInput = Record<string, unknown>> {
-  name: string
-  description: string
-  route: [HttpMethod, string]
-  type: 'stream'
-  authentication?: 'none' | 'required' | 'optional'
-  sideEffects?: string[]
-  errorCases?: string[]
-  rateLimit?: RateLimitConfig
-  input: InputSchemaDef
-  stream: (ctx: StreamContext<TInput>) => Promise<void>
+	name: string;
+	description: string;
+	route: [HttpMethod, string];
+	type: "stream";
+	authentication?: "none" | "required" | "optional";
+	sideEffects?: string[];
+	errorCases?: string[];
+	rateLimit?: RateLimitConfig;
+	input: InputSchemaDef;
+	stream: (ctx: StreamContext<TInput>) => Promise<void>;
 }
 
 /**
  * Resolved stream feature definition with all defaults applied.
  */
 export interface StreamFeatureDef<TInput = Record<string, unknown>> {
-  name: string
-  description: string
-  route: [HttpMethod, string]
-  type: 'stream'
-  authentication: 'none' | 'required' | 'optional'
-  sideEffects: string[]
-  errorCases: string[]
-  rateLimit?: RateLimitConfig
-  input: InputSchemaDef
-  stream: (ctx: StreamContext<TInput>) => Promise<void>
+	name: string;
+	description: string;
+	route: [HttpMethod, string];
+	type: "stream";
+	authentication: "none" | "required" | "optional";
+	sideEffects: string[];
+	errorCases: string[];
+	rateLimit?: RateLimitConfig;
+	input: InputSchemaDef;
+	stream: (ctx: StreamContext<TInput>) => Promise<void>;
 }
 
 /**
  * Union of all resolved feature definitions.
  * Use `feature.type` to discriminate between request and stream features.
  */
-export type AnyFeatureDef = FeatureDef | StreamFeatureDef
+export type AnyFeatureDef = FeatureDef | StreamFeatureDef;
 
 /**
  * Define a feature. Takes a plain options object and returns a resolved
@@ -145,42 +152,42 @@ export type AnyFeatureDef = FeatureDef | StreamFeatureDef
  * on the `type` field.
  */
 export function defineFeature<TInput = Record<string, unknown>>(
-  opts: StreamFeatureOptions<TInput>,
-): StreamFeatureDef<TInput>
+	opts: StreamFeatureOptions<TInput>,
+): StreamFeatureDef<TInput>;
 export function defineFeature<TInput = Record<string, unknown>>(
-  opts: FeatureOptions<TInput>,
-): FeatureDef<TInput>
+	opts: FeatureOptions<TInput>,
+): FeatureDef<TInput>;
 export function defineFeature<TInput = Record<string, unknown>>(
-  opts: FeatureOptions<TInput> | StreamFeatureOptions<TInput>,
+	opts: FeatureOptions<TInput> | StreamFeatureOptions<TInput>,
 ): FeatureDef<TInput> | StreamFeatureDef<TInput> {
-  if (opts.type === 'stream') {
-    const streamOpts = opts as StreamFeatureOptions<TInput>
-    return {
-      name: streamOpts.name,
-      description: streamOpts.description,
-      route: streamOpts.route,
-      type: 'stream',
-      authentication: streamOpts.authentication ?? 'required',
-      sideEffects: streamOpts.sideEffects ?? [],
-      errorCases: streamOpts.errorCases ?? [],
-      rateLimit: streamOpts.rateLimit,
-      input: streamOpts.input,
-      stream: streamOpts.stream,
-    }
-  }
+	if (opts.type === "stream") {
+		const streamOpts = opts as StreamFeatureOptions<TInput>;
+		return {
+			name: streamOpts.name,
+			description: streamOpts.description,
+			route: streamOpts.route,
+			type: "stream",
+			authentication: streamOpts.authentication ?? "required",
+			sideEffects: streamOpts.sideEffects ?? [],
+			errorCases: streamOpts.errorCases ?? [],
+			rateLimit: streamOpts.rateLimit,
+			input: streamOpts.input,
+			stream: streamOpts.stream,
+		};
+	}
 
-  const reqOpts = opts as FeatureOptions<TInput>
-  return {
-    name: reqOpts.name,
-    description: reqOpts.description,
-    route: reqOpts.route,
-    type: reqOpts.type ?? 'request',
-    trigger: reqOpts.trigger,
-    authentication: reqOpts.authentication ?? 'required',
-    sideEffects: reqOpts.sideEffects ?? [],
-    errorCases: reqOpts.errorCases ?? [],
-    rateLimit: reqOpts.rateLimit,
-    input: reqOpts.input,
-    handle: reqOpts.handle,
-  }
+	const reqOpts = opts as FeatureOptions<TInput>;
+	return {
+		name: reqOpts.name,
+		description: reqOpts.description,
+		route: reqOpts.route,
+		type: reqOpts.type ?? "request",
+		trigger: reqOpts.trigger,
+		authentication: reqOpts.authentication ?? "required",
+		sideEffects: reqOpts.sideEffects ?? [],
+		errorCases: reqOpts.errorCases ?? [],
+		rateLimit: reqOpts.rateLimit,
+		input: reqOpts.input,
+		handle: reqOpts.handle,
+	};
 }

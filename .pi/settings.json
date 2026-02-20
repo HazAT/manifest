@@ -1,15 +1,11 @@
 {
-  "skills": [
-    "skills"
-  ],
-  "extensions": [
-    "../extensions/spark/pi-extension",
-    "extensions/answer.ts",
-    "extensions/execute-command.ts",
-    "extensions/todos.ts",
-    "extensions/dev-server.ts"
-  ],
-  "packages": [
-    "npm:pi-subagents"
-  ]
+	"skills": ["skills"],
+	"extensions": [
+		"../extensions/spark/pi-extension",
+		"extensions/answer.ts",
+		"extensions/execute-command.ts",
+		"extensions/todos.ts",
+		"extensions/dev-server.ts"
+	],
+	"packages": ["npm:pi-subagents"]
 }

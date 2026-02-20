@@ -7,27 +7,38 @@
  * This file re-exports everything a feature needs.
  */
 
-export { defineFeature } from './feature'
-export type { AuthUser, FeatureDef, FeatureResult, HandleContext, FeatureOptions, StreamFeatureDef, StreamFeatureOptions, StreamContext, EmitFn, AnyFeatureDef } from './feature'
-
-export { t } from './types'
-export type { FieldDef, InputSchemaDef, StringFieldDef, IntegerFieldDef, NumberFieldDef, BooleanFieldDef, ArrayFieldDef } from './types'
-
-export { validateInput } from './validator'
-
-export { createRouter } from './router'
-export type { Router, MatchResult } from './router'
-
-export { scanFeatures, scanAllFeatures } from './scanner'
-export type { FeatureRegistry } from './scanner'
-
-export { toEnvelope, createResultHelpers } from './envelope'
-export type { ResponseEnvelope } from './envelope'
-
-export { createManifestServer } from './server'
-export type { ManifestServer, ManifestServerOptions } from './server'
-
-export { createTestClient } from './testing'
-export type { TestClient, TestResult, StreamEvent } from './testing'
-
-export type { RateLimitConfig } from '../services/rateLimiter'
+export type { RateLimitConfig } from "../services/rateLimiter";
+export type { ResponseEnvelope } from "./envelope";
+export { createResultHelpers, toEnvelope } from "./envelope";
+export type {
+	AnyFeatureDef,
+	AuthUser,
+	EmitFn,
+	FeatureDef,
+	FeatureOptions,
+	FeatureResult,
+	HandleContext,
+	StreamContext,
+	StreamFeatureDef,
+	StreamFeatureOptions,
+} from "./feature";
+export { defineFeature } from "./feature";
+export type { MatchResult, Router } from "./router";
+export { createRouter } from "./router";
+export type { FeatureRegistry } from "./scanner";
+export { scanAllFeatures, scanFeatures } from "./scanner";
+export type { ManifestServer, ManifestServerOptions } from "./server";
+export { createManifestServer } from "./server";
+export type { StreamEvent, TestClient, TestResult } from "./testing";
+export { createTestClient } from "./testing";
+export type {
+	ArrayFieldDef,
+	BooleanFieldDef,
+	FieldDef,
+	InputSchemaDef,
+	IntegerFieldDef,
+	NumberFieldDef,
+	StringFieldDef,
+} from "./types";
+export { t } from "./types";
+export { validateInput } from "./validator";

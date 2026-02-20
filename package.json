@@ -1,18 +1,20 @@
 {
-  "name": "manifest-app",
-  "version": "0.1.0",
-  "description": "Code that watches itself.",
-  "type": "module",
-  "scripts": {
-    "dev": "bun --hot index.ts",
-    "start": "bun index.ts",
-    "test": "bun test",
-    "build": "bun -e \"import { buildFrontend } from './manifest/frontend.ts'; const r = await buildFrontend(process.cwd()); if (!r.success) process.exit(1);\""
-  },
-  "dependencies": {
-    "@mariozechner/pi-coding-agent": "0.52.10"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  }
+	"name": "manifest-app",
+	"version": "0.1.0",
+	"description": "Code that watches itself.",
+	"type": "module",
+	"scripts": {
+		"dev": "bun --hot index.ts",
+		"start": "bun index.ts",
+		"test": "bun test",
+		"build": "bun -e \"import { buildFrontend } from './manifest/frontend.ts'; const r = await buildFrontend(process.cwd()); if (!r.success) process.exit(1);\"",
+		"format": "bunx @biomejs/biome format --write .",
+		"lint": "bunx @biomejs/biome lint --write --unsafe ."
+	},
+	"dependencies": {
+		"@mariozechner/pi-coding-agent": "0.52.10"
+	},
+	"devDependencies": {
+		"@types/bun": "latest"
+	}
 }

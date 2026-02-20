@@ -683,7 +683,7 @@
 </div>
 
 <script>
-(function() {
+(() => {
   let ws = null;
   let reconnectDelay = 2000;
   let reconnectTimer = null;
@@ -692,20 +692,20 @@
   let sessionReady = false;
   let userScrolledUp = false;
 
-  const mainUI = document.getElementById('main-ui');
+  const _mainUI = document.getElementById('main-ui');
   const messagesEl = document.getElementById('messages');
   const msgInput = document.getElementById('msg-input');
   const sendBtn = document.getElementById('send-btn');
   const stopBtn = document.getElementById('stop-btn');
   const statusDot = document.getElementById('status-dot');
   const envBadge = document.getElementById('env-badge');
-  const modeBadge = document.getElementById('mode-badge');
+  const _modeBadge = document.getElementById('mode-badge');
   const streamingInd = document.getElementById('streaming-ind');
   let currentAssistantEl = null;
   let currentThinkingEl = null;
-  let currentToolCalls = {};
+  const currentToolCalls = {};
   let streamingToolCall = null;
-  let pendingToolCalls = {};
+  const pendingToolCalls = {};
 
   // Track messages sent by this client.
   // Non-queued: rendered immediately in chat, echo suppressed.
@@ -720,23 +720,23 @@
     setConnectionStatus('connecting');
 
     const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = proto + '//' + location.host + '/ws';
+    const wsUrl = `${proto}//${location.host}/ws`;
     ws = new WebSocket(wsUrl);
 
-    ws.onopen = function() {
+    ws.onopen = () => {
       isConnected = true;
       reconnectDelay = 2000;
       setConnectionStatus('connected');
       updateInputState();
     };
 
-    ws.onmessage = function(e) {
+    ws.onmessage = (e) => {
       let data;
       try { data = JSON.parse(e.data); } catch { return; }
       handleEvent(data);
     };
 
-    ws.onclose = function() {
+    ws.onclose = () => {
       isConnected = false;
       sessionReady = false;
       localSentMessages = [];
@@ -744,17 +744,17 @@
       setConnectionStatus('disconnected');
       updateInputState();
       clearTimeout(reconnectTimer);
-      reconnectTimer = setTimeout(function() {
+      reconnectTimer = setTimeout(() => {
         reconnectDelay = Math.min(reconnectDelay * 2, 30000);
         connect();
       }, reconnectDelay);
     };
 
-    ws.onerror = function() {};
+    ws.onerror = () => {};
   }
 
   function setConnectionStatus(status) {
-    statusDot.className = 'status-dot ' + status;
+    statusDot.className = `status-dot ${status}`;
     statusDot.title = status.charAt(0).toUpperCase() + status.slice(1);
   }
 
@@ -766,7 +766,7 @@
           envBadge.textContent = data.data.environment === 'development' ? 'dev' : 'prod';
         }
         if (data.data.isStreaming) setStreaming(true);
-        if (data.data.sessionError) appendSystem('Session error: ' + data.data.sessionError);
+        if (data.data.sessionError) appendSystem(`Session error: ${data.data.sessionError}`);
         updateInputState();
         break;
       case 'messages':
@@ -779,10 +779,10 @@
           currentThinkingEl = null;
           streamingToolCall = null;
         } else if (data.message && data.message.role === 'user') {
-          var userText = typeof data.message.content === 'string' ? data.message.content : (Array.isArray(data.message.content) ? data.message.content.map(function(b) { return b.text || ''; }).join('') : '');
+          var userText = typeof data.message.content === 'string' ? data.message.content : (Array.isArray(data.message.content) ? data.message.content.map((b) => b.text || '').join('') : '');
           if (userText.trim()) {
             // Check if this is an echo of a message we sent locally
-            var idx = localSentMessages.findIndex(function(m) { return m.text === userText; });
+            var idx = localSentMessages.findIndex((m) => m.text === userText);
             if (idx !== -1) {
               var entry = localSentMessages.splice(idx, 1)[0];
               if (entry.queued && entry.el) {
@@ -873,7 +873,7 @@
         if (!argsStr || argsStr === '{}') argsStr = pending.args;
         delete pendingToolCalls[id];
       }
-      createToolCallEl(id, data.toolName || (pending && pending.name) || '', argsStr);
+      createToolCallEl(id, data.toolName || (pending?.name) || '', argsStr);
     }
   }
 
@@ -897,12 +897,12 @@
       const parsed = JSON.parse(argsStr);
       for (const k in parsed) {
         const v = parsed[k];
-        if (typeof v === 'string') { argsPreview = v.length > 80 ? v.slice(0, 80) + '…' : v; break; }
+        if (typeof v === 'string') { argsPreview = v.length > 80 ? `${v.slice(0, 80)}…` : v; break; }
       }
-    } catch { argsPreview = argsStr ? (argsStr.length > 80 ? argsStr.slice(0, 80) + '…' : argsStr) : ''; }
+    } catch { argsPreview = argsStr ? (argsStr.length > 80 ? `${argsStr.slice(0, 80)}…` : argsStr) : ''; }
     const summary = document.createElement('summary');
     var prefix = skill ? '<span class="skill-badge">📖 skill</span>' : '';
-    summary.innerHTML = prefix + '<span class="tool-name">' + escapeHtml(name || '?') + '</span> <span class="tool-args">' + escapeHtml(argsPreview) + '</span>';
+    summary.innerHTML = `${prefix}<span class="tool-name">${escapeHtml(name || '?')}</span> <span class="tool-args">${escapeHtml(argsPreview)}</span>`;
     const resultDiv = document.createElement('div');
     resultDiv.className = 'tool-result';
     resultDiv.textContent = 'Running...';
@@ -925,10 +925,10 @@
       let text = '';
       if (data.result != null) {
         if (typeof data.result === 'string') text = data.result;
-        else if (Array.isArray(data.result)) text = data.result.map(function(b) { return b.text || ''; }).join('\n');
+        else if (Array.isArray(data.result)) text = data.result.map((b) => b.text || '').join('\n');
         else text = JSON.stringify(data.result, null, 2);
       }
-      if (text.length > 5000) text = text.slice(0, 5000) + '\n… (truncated)';
+      if (text.length > 5000) text = `${text.slice(0, 5000)}\n… (truncated)`;
       tc.resultEl.textContent = text || '(no output)';
       if (data.isError) tc.resultEl.classList.add('error');
       delete currentToolCalls[data.toolCallId];
@@ -938,13 +938,13 @@
 
   function renderHistory(messages) {
     const toolResults = {};
-    messages.forEach(function(m) { if (m.role === 'toolResult' && m.toolCallId) toolResults[m.toolCallId] = m; });
-    messages.forEach(function(m) {
+    messages.forEach((m) => { if (m.role === 'toolResult' && m.toolCallId) toolResults[m.toolCallId] = m; });
+    messages.forEach((m) => {
       if (m.role === 'user') {
-        const text = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.map(function(b) { return b.text || ''; }).join('') : '');
+        const text = typeof m.content === 'string' ? m.content : (Array.isArray(m.content) ? m.content.map((b) => b.text || '').join('') : '');
         if (text.trim()) appendUserOrSparkEvent(text);
       } else if (m.role === 'assistant' && Array.isArray(m.content)) {
-        m.content.forEach(function(block) {
+        m.content.forEach((block) => {
           if (block.type === 'text' && block.text) {
             const el = document.createElement('div');
             el.className = 'msg msg-assistant';
@@ -963,8 +963,8 @@
               const tc = currentToolCalls[block.id];
               if (tc) {
                 let text = '';
-                if (Array.isArray(tr.content)) text = tr.content.map(function(b) { return b.text || ''; }).join('\n');
-                if (text.length > 5000) text = text.slice(0, 5000) + '\n… (truncated)';
+                if (Array.isArray(tr.content)) text = tr.content.map((b) => b.text || '').join('\n');
+                if (text.length > 5000) text = `${text.slice(0, 5000)}\n… (truncated)`;
                 tc.resultEl.textContent = text || '(no output)';
                 if (tr.isError) tc.resultEl.classList.add('error');
                 delete currentToolCalls[block.id];
@@ -1028,34 +1028,34 @@
       } catch (e) {}
     }
 
-    var id = 'spark-json-' + Math.random().toString(36).slice(2, 10);
+    var id = `spark-json-${Math.random().toString(36).slice(2, 10)}`;
 
     var html = '<div class="spark-event-header">';
-    html += '<span class="spark-event-badge">' + escapeHtml(typeLabel) + '</span>';
-    if (event.feature) html += '<span class="spark-event-route"><code>' + escapeHtml(event.feature) + '</code></span>';
-    if (method) html += '<span class="spark-event-route"><span class="method">' + escapeHtml(method) + '</span> ' + escapeHtml(path) + '</span>';
-    if (event.status) html += '<span class="spark-event-badge" style="background:rgba(239,68,68,0.25)">' + event.status + '</span>';
-    if (ts) html += '<span class="spark-event-timestamp">' + ts + '</span>';
+    html += `<span class="spark-event-badge">${escapeHtml(typeLabel)}</span>`;
+    if (event.feature) html += `<span class="spark-event-route"><code>${escapeHtml(event.feature)}</code></span>`;
+    if (method) html += `<span class="spark-event-route"><span class="method">${escapeHtml(method)}</span> ${escapeHtml(path)}</span>`;
+    if (event.status) html += `<span class="spark-event-badge" style="background:rgba(239,68,68,0.25)">${event.status}</span>`;
+    if (ts) html += `<span class="spark-event-timestamp">${ts}</span>`;
     html += '</div>';
 
     html += '<div class="spark-event-body">';
-    if (event.error && event.error.message) {
-      html += '<div class="spark-event-error-msg">' + escapeHtml(event.error.message) + '</div>';
+    if (event.error?.message) {
+      html += `<div class="spark-event-error-msg">${escapeHtml(event.error.message)}</div>`;
     }
 
     html += '<div class="spark-event-meta">';
-    if (event.traceId) html += '<span class="spark-event-meta-item"><span class="label">trace</span><span class="value">' + escapeHtml(event.traceId) + '</span></span>';
-    if (event.environment) html += '<span class="spark-event-meta-item"><span class="label">env</span><span class="value">' + escapeHtml(event.environment) + '</span></span>';
+    if (event.traceId) html += `<span class="spark-event-meta-item"><span class="label">trace</span><span class="value">${escapeHtml(event.traceId)}</span></span>`;
+    if (event.environment) html += `<span class="spark-event-meta-item"><span class="label">env</span><span class="value">${escapeHtml(event.environment)}</span></span>`;
     html += '</div>';
 
-    if (event.error && event.error.stack) {
+    if (event.error?.stack) {
       var stackLines = event.error.stack.split('\\n').slice(0, 6).join('\n');
-      html += '<div class="spark-event-stack">' + escapeHtml(stackLines) + '</div>';
+      html += `<div class="spark-event-stack">${escapeHtml(stackLines)}</div>`;
     }
     html += '</div>';
 
-    html += '<button class="spark-event-json-toggle" onclick="var j=document.getElementById(\'' + id + '\');j.style.display=j.style.display===\'block\'?\'none\':\'block\';this.textContent=j.style.display===\'block\'?\'▾ hide raw event\':\'▸ show raw event\'">▸ show raw event</button>';
-    html += '<div class="spark-event-json" id="' + id + '"><pre>' + syntaxHighlightJson(event) + '</pre></div>';
+    html += `<button class="spark-event-json-toggle" onclick="var j=document.getElementById('${id}');j.style.display=j.style.display==='block'?'none':'block';this.textContent=j.style.display==='block'?'▾ hide raw event':'▸ show raw event'">▸ show raw event</button>`;
+    html += `<div class="spark-event-json" id="${id}"><pre>${syntaxHighlightJson(event)}</pre></div>`;
 
     el.innerHTML = html;
     messagesEl.appendChild(el);
@@ -1087,7 +1087,7 @@
   function appendError(title, message) {
     const el = document.createElement('div');
     el.className = 'error-card';
-    el.innerHTML = '<div class="error-title">' + escapeHtml(title) + '</div><pre>' + escapeHtml(message || '') + '</pre>';
+    el.innerHTML = `<div class="error-title">${escapeHtml(title)}</div><pre>${escapeHtml(message || '')}</pre>`;
     messagesEl.appendChild(el);
     autoScroll();
   }
@@ -1106,7 +1106,7 @@
     msgInput.placeholder = !isConnected ? 'Disconnected...' : !sessionReady ? 'Session loading...' : 'Message Spark...';
   }
 
-  messagesEl.addEventListener('scroll', function() {
+  messagesEl.addEventListener('scroll', () => {
     userScrolledUp = (messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight) > 50;
   });
 
@@ -1116,16 +1116,16 @@
 
   msgInput.addEventListener('input', function() {
     this.style.height = 'auto';
-    this.style.height = Math.min(this.scrollHeight, 144) + 'px';
+    this.style.height = `${Math.min(this.scrollHeight, 144)}px`;
   });
 
-  msgInput.addEventListener('keydown', function(e) {
+  msgInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
   });
 
   sendBtn.addEventListener('click', sendMessage);
 
-  stopBtn.addEventListener('click', function() {
+  stopBtn.addEventListener('click', () => {
     if (ws && ws.readyState === 1) ws.send(JSON.stringify({ type: 'abort' }));
   });
 
@@ -1153,12 +1153,12 @@
 
   function renderMarkdown(text) {
     let html = escapeHtml(text);
-    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(_, lang, code) { return '<pre><code>' + code + '</code></pre>'; });
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_, _lang, code) => `<pre><code>${code}</code></pre>`);
     html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
     html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(match, text, url) {
+    html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, text, url) => {
       if (/^(javascript|data|vbscript):/i.test(url)) return match;
-      return '<a href="' + url + '" target="_blank" rel="noopener">' + text + '</a>';
+      return `<a href="${url}" target="_blank" rel="noopener">${text}</a>`;
     });
     // Auto-link bare URLs not already inside tags or code blocks
     html = autoLinkUrls(html);
@@ -1181,11 +1181,11 @@
         continue;
       }
       if (inCode > 0 || inAnchor > 0) continue;
-      parts[i] = part.replace(/(https?:\/\/[^\s<\[\]"']+)/g, function(url) {
+      parts[i] = part.replace(/(https?:\/\/[^\s<[\]"']+)/g, (url) => {
         // Trim trailing punctuation that's unlikely part of the URL
         var clean = url.replace(/[.,;:!?)]+$/, '');
         var trailing = url.slice(clean.length);
-        return '<a href="' + clean + '" target="_blank" rel="noopener">' + clean + '</a>' + trailing;
+        return `<a href="${clean}" target="_blank" rel="noopener">${clean}</a>${trailing}`;
       });
     }
     return parts.join('');

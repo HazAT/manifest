@@ -10,7 +10,7 @@
  * 4. Submits the compiled answers when done
  */
 
-import { complete, type Model, type Api, type UserMessage } from "@mariozechner/pi-ai";
+import { type Api, complete, type Model, type UserMessage } from "@mariozechner/pi-ai";
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 import { BorderedLoader } from "@mariozechner/pi-coding-agent";
 import {
@@ -19,8 +19,8 @@ import {
 	type EditorTheme,
 	Key,
 	matchesKey,
-	truncateToWidth,
 	type TUI,
+	truncateToWidth,
 	visibleWidth,
 	wrapTextWithAnsi,
 } from "@mariozechner/pi-tui";
@@ -143,11 +143,7 @@ class QnAComponent implements Component {
 	private yellow = (s: string) => `\x1b[33m${s}\x1b[0m`;
 	private gray = (s: string) => `\x1b[90m${s}\x1b[0m`;
 
-	constructor(
-		questions: ExtractedQuestion[],
-		tui: TUI,
-		onDone: (result: string | null) => void,
-	) {
+	constructor(questions: ExtractedQuestion[], tui: TUI, onDone: (result: string | null) => void) {
 		this.questions = questions;
 		this.answers = questions.map(() => "");
 		this.tui = tui;
@@ -171,11 +167,6 @@ class QnAComponent implements Component {
 			this.invalidate();
 			this.tui.requestRender();
 		};
-	}
-
-	private allQuestionsAnswered(): boolean {
-		this.saveCurrentAnswer();
-		return this.answers.every((a) => (a?.trim() || "").length > 0);
 	}
 
 	private saveCurrentAnswer(): void {
@@ -215,7 +206,10 @@ class QnAComponent implements Component {
 				const match = matches[i];
 				const startIndex = match.index || 0;
 				const endIndex = i < matches.length - 1 ? matches[i + 1].index : context.length;
-				const choiceText = context.slice(startIndex, endIndex).replace(/^,?\s*/, "").trim();
+				const choiceText = context
+					.slice(startIndex, endIndex)
+					.replace(/^,?\s*/, "")
+					.trim();
 
 				// Wrap long choice text with proper indentation
 				const wrappedChoice = wrapTextWithAnsi(`  ${choiceText}`, maxWidth);
@@ -255,7 +249,10 @@ class QnAComponent implements Component {
 				const match = matches[i];
 				const startIndex = match.index || 0;
 				const endIndex = i < matches.length - 1 ? matches[i + 1].index : context.length;
-				const choiceText = context.slice(startIndex, endIndex).replace(/^,?\s*/, "").trim();
+				const choiceText = context
+					.slice(startIndex, endIndex)
+					.replace(/^,?\s*/, "")
+					.trim();
 				lines.push(`>   ${choiceText}`);
 			}
 
@@ -302,7 +299,11 @@ class QnAComponent implements Component {
 				this.submit();
 				return;
 			}
-			if (matchesKey(data, Key.escape) || matchesKey(data, Key.ctrl("c")) || data.toLowerCase() === "n") {
+			if (
+				matchesKey(data, Key.escape) ||
+				matchesKey(data, Key.ctrl("c")) ||
+				data.toLowerCase() === "n"
+			) {
 				this.showingConfirmation = false;
 				this.invalidate();
 				this.tui.requestRender();
@@ -402,10 +403,10 @@ class QnAComponent implements Component {
 		};
 
 		// Title
-		lines.push(padToWidth(this.dim("╭" + horizontalLine(boxWidth - 2) + "╮")));
+		lines.push(padToWidth(this.dim(`╭${horizontalLine(boxWidth - 2)}╮`)));
 		const title = `${this.bold(this.cyan("Questions"))} ${this.dim(`(${this.currentIndex + 1}/${this.questions.length})`)}`;
 		lines.push(padToWidth(boxLine(title)));
-		lines.push(padToWidth(this.dim("├" + horizontalLine(boxWidth - 2) + "┤")));
+		lines.push(padToWidth(this.dim(`├${horizontalLine(boxWidth - 2)}┤`)));
 
 		// Progress indicator
 		const progressParts: string[] = [];
@@ -453,7 +454,7 @@ class QnAComponent implements Component {
 				lines.push(padToWidth(boxLine(answerPrefix + editorLines[i])));
 			} else {
 				// Subsequent lines get padding to align with the first line
-				lines.push(padToWidth(boxLine("   " + editorLines[i])));
+				lines.push(padToWidth(boxLine(`   ${editorLines[i]}`)));
 			}
 		}
 
@@ -461,15 +462,15 @@ class QnAComponent implements Component {
 
 		// Confirmation dialog or footer with controls
 		if (this.showingConfirmation) {
-			lines.push(padToWidth(this.dim("├" + horizontalLine(boxWidth - 2) + "┤")));
+			lines.push(padToWidth(this.dim(`├${horizontalLine(boxWidth - 2)}┤`)));
 			const confirmMsg = `${this.yellow("Submit all answers?")} ${this.dim("(Enter/y to confirm, Esc/n to cancel)")}`;
 			lines.push(padToWidth(boxLine(truncateToWidth(confirmMsg, contentWidth))));
 		} else {
-			lines.push(padToWidth(this.dim("├" + horizontalLine(boxWidth - 2) + "┤")));
+			lines.push(padToWidth(this.dim(`├${horizontalLine(boxWidth - 2)}┤`)));
 			const controls = `${this.dim("Tab/Enter")} next · ${this.dim("Shift+Tab")} prev · ${this.dim("Shift+Enter")} newline · ${this.dim("Esc")} cancel`;
 			lines.push(padToWidth(boxLine(truncateToWidth(controls, contentWidth))));
 		}
-		lines.push(padToWidth(this.dim("╰" + horizontalLine(boxWidth - 2) + "╯")));
+		lines.push(padToWidth(this.dim(`╰${horizontalLine(boxWidth - 2)}╯`)));
 
 		this.cachedWidth = width;
 		this.cachedLines = lines;
@@ -479,52 +480,57 @@ class QnAComponent implements Component {
 
 export default function (pi: ExtensionAPI) {
 	const answerHandler = async (ctx: ExtensionContext) => {
-			if (!ctx.hasUI) {
-				ctx.ui.notify("answer requires interactive mode", "error");
-				return;
-			}
+		if (!ctx.hasUI) {
+			ctx.ui.notify("answer requires interactive mode", "error");
+			return;
+		}
 
-			if (!ctx.model) {
-				ctx.ui.notify("No model selected", "error");
-				return;
-			}
+		if (!ctx.model) {
+			ctx.ui.notify("No model selected", "error");
+			return;
+		}
 
-			// Find the last assistant message on the current branch
-			const branch = ctx.sessionManager.getBranch();
-			let lastAssistantText: string | undefined;
+		// Find the last assistant message on the current branch
+		const branch = ctx.sessionManager.getBranch();
+		let lastAssistantText: string | undefined;
 
-			for (let i = branch.length - 1; i >= 0; i--) {
-				const entry = branch[i];
-				if (entry.type === "message") {
-					const msg = entry.message;
-					if ("role" in msg && msg.role === "assistant") {
-						// Accept "stop" and "toolUse" (for self-invoked /answer via execute_command)
-						if (msg.stopReason !== "stop" && msg.stopReason !== "toolUse") {
-							ctx.ui.notify(`Last assistant message incomplete (${msg.stopReason})`, "error");
-							return;
-						}
-						const textParts = msg.content
-							.filter((c): c is { type: "text"; text: string } => c.type === "text")
-							.map((c) => c.text);
-						if (textParts.length > 0) {
-							lastAssistantText = textParts.join("\n");
-							break;
-						}
+		for (let i = branch.length - 1; i >= 0; i--) {
+			const entry = branch[i];
+			if (entry.type === "message") {
+				const msg = entry.message;
+				if ("role" in msg && msg.role === "assistant") {
+					// Accept "stop" and "toolUse" (for self-invoked /answer via execute_command)
+					if (msg.stopReason !== "stop" && msg.stopReason !== "toolUse") {
+						ctx.ui.notify(`Last assistant message incomplete (${msg.stopReason})`, "error");
+						return;
+					}
+					const textParts = msg.content
+						.filter((c): c is { type: "text"; text: string } => c.type === "text")
+						.map((c) => c.text);
+					if (textParts.length > 0) {
+						lastAssistantText = textParts.join("\n");
+						break;
 					}
 				}
 			}
+		}
 
-			if (!lastAssistantText) {
-				ctx.ui.notify("No assistant messages found", "error");
-				return;
-			}
+		if (!lastAssistantText) {
+			ctx.ui.notify("No assistant messages found", "error");
+			return;
+		}
 
-			// Select the best model for extraction (prefer Codex mini, then haiku)
-			const extractionModel = await selectExtractionModel(ctx.model, ctx.modelRegistry);
+		// Select the best model for extraction (prefer Codex mini, then haiku)
+		const extractionModel = await selectExtractionModel(ctx.model, ctx.modelRegistry);
 
-			// Run extraction with loader UI
-			const extractionResult = await ctx.ui.custom<ExtractionResult | null>((tui, theme, _kb, done) => {
-				const loader = new BorderedLoader(tui, theme, `Extracting questions using ${extractionModel.id}...`);
+		// Run extraction with loader UI
+		const extractionResult = await ctx.ui.custom<ExtractionResult | null>(
+			(tui, theme, _kb, done) => {
+				const loader = new BorderedLoader(
+					tui,
+					theme,
+					`Extracting questions using ${extractionModel.id}...`,
+				);
 				loader.onAbort = () => done(null);
 
 				const doExtract = async () => {
@@ -558,37 +564,38 @@ export default function (pi: ExtensionAPI) {
 					.catch(() => done(null));
 
 				return loader;
-			});
+			},
+		);
 
-			if (extractionResult === null) {
-				ctx.ui.notify("Cancelled", "info");
-				return;
-			}
+		if (extractionResult === null) {
+			ctx.ui.notify("Cancelled", "info");
+			return;
+		}
 
-			if (extractionResult.questions.length === 0) {
-				ctx.ui.notify("No questions found in the last message", "info");
-				return;
-			}
+		if (extractionResult.questions.length === 0) {
+			ctx.ui.notify("No questions found in the last message", "info");
+			return;
+		}
 
-			// Show the Q&A component
-			const answersResult = await ctx.ui.custom<string | null>((tui, _theme, _kb, done) => {
-				return new QnAComponent(extractionResult.questions, tui, done);
-			});
+		// Show the Q&A component
+		const answersResult = await ctx.ui.custom<string | null>((tui, _theme, _kb, done) => {
+			return new QnAComponent(extractionResult.questions, tui, done);
+		});
 
-			if (answersResult === null) {
-				ctx.ui.notify("Cancelled", "info");
-				return;
-			}
+		if (answersResult === null) {
+			ctx.ui.notify("Cancelled", "info");
+			return;
+		}
 
-			// Send the answers directly as a message and trigger a turn
-			pi.sendMessage(
-				{
-					customType: "answers",
-					content: "I answered your questions in the following way:\n\n" + answersResult,
-					display: true,
-				},
-				{ triggerTurn: true },
-			);
+		// Send the answers directly as a message and trigger a turn
+		pi.sendMessage(
+			{
+				customType: "answers",
+				content: `I answered your questions in the following way:\n\n${answersResult}`,
+				display: true,
+			},
+			{ triggerTurn: true },
+		);
 	};
 
 	pi.registerCommand("answer", {
