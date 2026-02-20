@@ -237,8 +237,8 @@ export async function createManifestServer(options: ManifestServerOptions) {
           }
         }
 
-        // Auth enforcement
-        if (feature.authentication === 'required' && !user) {
+        // Auth enforcement (only when an authenticate function is wired in)
+        if (authenticate && feature.authentication === 'required' && !user) {
           const durationMs = elapsed(start)
           log.access({
             timestamp: new Date().toISOString(), method, path: pathname, status: 401,
