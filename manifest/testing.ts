@@ -64,7 +64,7 @@ export function createTestClient(options: {
       if (feature.type === 'stream') {
         throw new Error(`Feature '${featureName}' is a stream feature. Use client.stream() instead of client.call().`)
       }
-      const result = await feature.handle({ input, ok, fail })
+      const result = await feature.handle({ input, request: new Request('http://test'), user: null, ok, fail })
 
       return {
         success: result.success,
@@ -112,7 +112,7 @@ export function createTestClient(options: {
       }
 
       const streamFeature = feature as StreamFeatureDef
-      await streamFeature.stream({ input, emit, close, fail })
+      await streamFeature.stream({ input, request: new Request('http://test'), user: null, emit, close, fail })
 
       return events
     },
