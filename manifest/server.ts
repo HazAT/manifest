@@ -10,12 +10,14 @@ import frontendConfig from '../config/frontend'
 import manifestConfig from '../config/manifest'
 import sparkConfig from '../config/spark'
 import { sparkDb, type AccessLog, type SparkEvent } from '../services/sparkDb'
+import type { AuthUser } from './feature'
 
 const textEncoder = new TextEncoder()
 
 export interface ManifestServerOptions {
   projectDir: string
   port?: number
+  authenticate?: (req: Request) => Promise<AuthUser | null>
 }
 
 export type ManifestServer = Awaited<ReturnType<typeof createManifestServer>>
@@ -23,6 +25,7 @@ export type ManifestServer = Awaited<ReturnType<typeof createManifestServer>>
 export async function createManifestServer(options: ManifestServerOptions) {
   const registry = await scanAllFeatures(options.projectDir)
   const router = createRouter(registry)
+  const authenticate = options.authenticate ?? null
 
   const sparkEnabled = sparkConfig.enabled
   const sparkWatchErrors = sparkEnabled && sparkConfig.watch.serverErrors
@@ -217,6 +220,35 @@ export async function createManifestServer(options: ManifestServerOptions) {
           )
         }
 
+        // Auth resolution
+        let user: AuthUser | null = null
+        if (authenticate && feature.authentication !== 'none') {
+          try {
+            user = await authenticate(req)
+          } catch {
+            user = null
+          }
+        }
+
+        // Auth enforcement
+        if (feature.authentication === 'required' && !user) {
+          const durationMs = elapsed(start)
+          log.access({
+            timestamp: new Date().toISOString(), method, path: pathname, status: 401,
+            duration_ms: durationMs, ip: server.requestIP(req)?.address ?? undefined,
+            feature: feature.name, request_id: requestId,
+            user_agent: req.headers.get('user-agent') ?? undefined,
+          })
+          return Response.json(
+            {
+              status: 401,
+              message: 'Authentication required',
+              meta: { feature: feature.name, request_id: requestId, duration_ms: durationMs },
+            },
+            { status: 401 },
+          )
+        }
+
         // Stream features return SSE responses
         if (feature.type === 'stream') {
           const stream = new ReadableStream({
@@ -258,7 +290,7 @@ export async function createManifestServer(options: ManifestServerOptions) {
               safeEnqueue(`event: meta\ndata: ${JSON.stringify({ feature: feature.name, request_id: requestId })}\n\n`)
 
               try {
-                await feature.stream({ input, emit, close, fail })
+                await feature.stream({ input, request: req, user, emit, close, fail })
                 close()
               } catch (err) {
                 const message = err instanceof Error ? err.message : 'Internal server error'
@@ -298,7 +330,7 @@ export async function createManifestServer(options: ManifestServerOptions) {
 
         // Execute request features
         const helpers = createResultHelpers()
-        const result = await feature.handle({ input, ok: helpers.ok, fail: helpers.fail })
+        const result = await feature.handle({ input, request: req, user, ok: helpers.ok, fail: helpers.fail })
         const durationMs = elapsed(start)
         const envelope = toEnvelope(result, { featureName: feature.name, requestId, durationMs })
 
@@ -310,7 +342,14 @@ export async function createManifestServer(options: ManifestServerOptions) {
           user_agent: req.headers.get('user-agent') ?? undefined,
         })
 
-        return Response.json(envelope, { status: result.status })
+        const responseHeaders: HeadersInit = {
+          'Content-Type': 'application/json',
+          ...result.headers,
+        }
+        return new Response(JSON.stringify(envelope), {
+          status: result.status,
+          headers: responseHeaders,
+        })
       } catch (err) {
         const durationMs = elapsed(start)
         const errorMsg = err instanceof Error ? err.message : String(err)
