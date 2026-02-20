@@ -14,6 +14,13 @@ import type { AuthUser } from './feature'
 
 const textEncoder = new TextEncoder()
 
+/** Shallow-copy input and redact sensitive fields before logging. */
+function sanitizeForLog(input: Record<string, unknown>): Record<string, unknown> {
+  const sanitized = { ...input }
+  if ('password' in sanitized) sanitized.password = '[REDACTED]'
+  return sanitized
+}
+
 export interface ManifestServerOptions {
   projectDir: string
   port?: number
@@ -206,7 +213,7 @@ export async function createManifestServer(options: ManifestServerOptions) {
           log.access({
             timestamp: new Date().toISOString(), method, path: pathname, status: 422,
             duration_ms: durationMs, ip: server.requestIP(req)?.address ?? undefined,
-            feature: feature.name, request_id: requestId, input: JSON.stringify(input),
+            feature: feature.name, request_id: requestId, input: JSON.stringify(sanitizeForLog(input)),
             user_agent: req.headers.get('user-agent') ?? undefined,
           })
           return Response.json(
@@ -305,7 +312,7 @@ export async function createManifestServer(options: ManifestServerOptions) {
                     message: err instanceof Error ? err.message : String(err),
                     stack: err instanceof Error ? err.stack : undefined,
                   },
-                  request: { input },
+                  request: { input: sanitizeForLog(input) },
                 })
               }
             },
@@ -315,7 +322,7 @@ export async function createManifestServer(options: ManifestServerOptions) {
           log.access({
             timestamp: new Date().toISOString(), method, path: pathname, status: 200,
             duration_ms: elapsed(start), ip: server.requestIP(req)?.address ?? undefined,
-            feature: feature.name, request_id: requestId, input: JSON.stringify(input),
+            feature: feature.name, request_id: requestId, input: JSON.stringify(sanitizeForLog(input)),
             user_agent: req.headers.get('user-agent') ?? undefined,
           })
 
@@ -337,7 +344,7 @@ export async function createManifestServer(options: ManifestServerOptions) {
         log.access({
           timestamp: new Date().toISOString(), method, path: pathname, status: result.status,
           duration_ms: durationMs, ip: server.requestIP(req)?.address ?? undefined,
-          feature: feature.name, request_id: requestId, input: JSON.stringify(input),
+          feature: feature.name, request_id: requestId, input: JSON.stringify(sanitizeForLog(input)),
           error: result.status >= 500 ? (result as any).message : undefined,
           user_agent: req.headers.get('user-agent') ?? undefined,
         })
@@ -356,7 +363,7 @@ export async function createManifestServer(options: ManifestServerOptions) {
         log.access({
           timestamp: new Date().toISOString(), method, path: pathname, status: 500,
           duration_ms: durationMs, ip: server.requestIP(req)?.address ?? undefined,
-          feature: feature.name, request_id: requestId, input: JSON.stringify(input),
+          feature: feature.name, request_id: requestId, input: JSON.stringify(sanitizeForLog(input)),
           error: errorMsg, user_agent: req.headers.get('user-agent') ?? undefined,
         })
         log.event({
@@ -369,7 +376,7 @@ export async function createManifestServer(options: ManifestServerOptions) {
             message: errorMsg,
             stack: err instanceof Error ? err.stack : undefined,
           },
-          request: { input },
+          request: { input: sanitizeForLog(input) },
         })
         return Response.json(
           {
