@@ -4,7 +4,7 @@
  */
 export default {
   appName: 'manifest-app',
-  appUrl: Bun.env.APP_URL ?? 'http://localhost:8080',
+  appUrl: Bun.env.APP_URL ?? 'http://localhost:3100',
   debug: Bun.env.NODE_ENV !== 'production',
 
   // API response settings

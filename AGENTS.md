@@ -468,6 +468,47 @@ Configure in `config/spark.ts`. The environment resolves from `SPARK_ENV` → `N
 
 Every event carries a `traceId` that links back to the original request. For server errors, this is the same `request_id` from the response envelope — the ID the client sees. For unhandled errors, Spark generates a standalone trace ID. Follow the trace from client response → database event → agent investigation.
 
+## Dev Server Management
+
+A Pi extension at `.pi/extensions/dev-server.ts` manages the `bun run dev` process. It auto-pauses the server before file edits and auto-restarts it when the agent finishes, so hot-reload doesn't interfere with writes.
+
+### Commands
+
+| Command | What it does |
+|---------|-------------|
+| `/server start` | Start the dev server (`bun run dev`) |
+| `/server stop` | Stop the dev server |
+| `/server restart` | Stop and restart the dev server |
+| `/server status` | Show whether the server is running, on which port, and its PID |
+
+### Programmatic Control
+
+Agents can control the server via the `execute_command` tool:
+
+```
+execute_command(command="/server start")
+execute_command(command="/server stop")
+execute_command(command="/server restart")
+```
+
+### Auto-Pause Behavior
+
+When the agent uses `write` or `edit` tools, the extension automatically:
+1. Stops the dev server before the first file edit in a turn
+2. Restarts the dev server when the agent turn ends
+
+This prevents Bun's hot-reload from picking up partial changes mid-edit. The status bar shows `⏸ Server paused` while edits are in progress.
+
+### Status Bar
+
+The footer shows the server state at all times:
+- `🟢 Server http://localhost:PORT` — running (clickable URL)
+- `🔴 Server stopped` — not running
+- `⏸ Server paused` — auto-stopped during edits
+- `🔴 Server crashed (exit N)` — process exited unexpectedly
+
+The port is read from `config/manifest.ts` (`appUrl`). If the port is occupied on start, the extension scans upward for a free port and updates the config automatically.
+
 ## When In Doubt
 
 1. Read the source. The answers are in the code, not in assumptions.

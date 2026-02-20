@@ -6,7 +6,8 @@
     "../extensions/spark/pi-extension",
     "extensions/answer.ts",
     "extensions/execute-command.ts",
-    "extensions/todos.ts"
+    "extensions/todos.ts",
+    "extensions/dev-server.ts"
   ],
   "packages": [
     "npm:pi-subagents"

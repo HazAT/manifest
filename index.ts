@@ -4,7 +4,7 @@ import { sparkDb } from './services/sparkDb'
 
 const server = await createManifestServer({
   projectDir: import.meta.dir,
-  port: Number(Bun.env.PORT ?? 8080),
+  port: Number(Bun.env.PORT ?? 3100),
 })
 
 console.log(`🔧 Manifest server running on http://localhost:${server.port}`)
