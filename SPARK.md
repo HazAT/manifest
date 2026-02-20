@@ -308,56 +308,58 @@ bun test
 
 If tests pass, say how many passed. If any fail, investigate and fix.
 
-Then briefly start the server to verify it responds. **Redirect output to `/dev/null`** — the server and frontend watcher produce continuous output that hangs bare `&` backgrounding.
+**If a frontend was installed in Step 3**, build it first:
 
 ```bash
+bun run build
+```
+
+Then start the server to verify everything responds. **Before starting, check for port conflicts** — stale processes or other services may be occupying the ports. Always clean up before starting.
+
+```bash
+# Find two free ports — one for the app, one for the Spark sidecar.
+# Start with the defaults (8080/8081) and increment until both are free.
+APP_PORT=8080
+SIDECAR_PORT=8081
+while lsof -ti:$APP_PORT >/dev/null 2>&1 || lsof -ti:$SIDECAR_PORT >/dev/null 2>&1; do
+  APP_PORT=$((APP_PORT + 1))
+  SIDECAR_PORT=$((APP_PORT + 1))
+done
+
 # Start server in background, silencing output so it doesn't hang
-bun index.ts > /dev/null 2>&1 &
+PORT=$APP_PORT bun index.ts > /dev/null 2>&1 &
 SERVER_PID=$!
 
 # Wait for server to be ready (up to 15 seconds)
 for i in $(seq 1 30); do
-  if curl -sf http://localhost:8080/__health > /dev/null 2>&1; then
+  if curl -sf http://localhost:$APP_PORT/__health > /dev/null 2>&1; then
     break
   fi
   sleep 0.5
 done
 
-curl -s http://localhost:8080/api/hello?name=World
+# Verify API
+curl -s http://localhost:$APP_PORT/api/hello?name=World
+
+# If frontend was installed, also verify it serves
+curl -s -o /dev/null -w "%{http_code}" http://localhost:$APP_PORT/
+
+# Clean up — always kill the server when done
 kill $SERVER_PID 2>/dev/null
+wait $SERVER_PID 2>/dev/null
 ```
 
 > The `/__health` endpoint is always available — agents use it to know when the server is ready instead of guessing with `sleep`.
 
-Show the user the JSON response. Then:
+If ports 8080/8081 were busy and you had to use different ones, tell the user which ports you used and why. If you changed ports, update `index.ts` and `config/spark.ts` to use the new defaults — or note that the defaults are fine and something temporary was occupying the port.
+
+Show the user the API JSON response. Then:
 
 > That response came from `features/HelloWorld.ts`. That file IS the feature — the route, the input, the logic, the metadata. Everything in one place. That's how every feature in your project will look.
 
-**If a frontend was installed in Step 3**, also verify it:
+**If a frontend was also verified**, tell the user:
 
-```bash
-# Build the frontend first
-bun run build
-
-# Start server and check the frontend is served
-bun index.ts > /dev/null 2>&1 &
-SERVER_PID=$!
-
-# Wait for server to be ready (up to 15 seconds)
-for i in $(seq 1 30); do
-  if curl -sf http://localhost:8080/__health > /dev/null 2>&1; then
-    break
-  fi
-  sleep 0.5
-done
-
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/
-kill $SERVER_PID 2>/dev/null
-```
-
-If the frontend build succeeds and the server returns 200 for `/`, tell the user:
-
-> Frontend is live at http://localhost:8080/ — your API and your pages, same server, no proxy. API routes take priority, static files fill in the rest.
+> Frontend is live at http://localhost:[port]/ — your API and your pages, same server, no proxy. API routes take priority, static files fill in the rest.
 
 If anything fails, investigate and fix before moving on.
 
@@ -474,15 +476,13 @@ If you're one-shotting it:
 
 Then hand off:
 
-**If you are a Pi agent**, reload context instead of telling the user to start a new session:
+**If you are a Pi agent**, tell the user to reload context instead of starting a new session:
 
 > That's your project — [N] features, tested and indexed.
 >
-> Reloading context now — all the skills, extensions, and project conventions are loading fresh.
+> Type `/reload` now — it'll load all the skills, extensions, and project conventions fresh. After that, you're ready to build.
 
-Then execute `/reload`. After the reload completes, tell the user:
-
-> You're set. The full Manifest context is loaded — `AGENTS.md` for conventions, skills for specialized tasks, and the Spark sidekick if you set it up. Start building.
+Wait for the user to type `/reload`. Don't proceed until they do — the reload ensures the agent has full Manifest context for everything that follows.
 
 **If you are NOT a Pi agent:**
 
@@ -494,17 +494,13 @@ Then execute `/reload`. After the reload completes, tell the user:
 
 If the project needs real architecture work:
 
-**If you are a Pi agent**, reload context instead of telling the user to start a new session:
+**If you are a Pi agent**, tell the user to reload context instead of starting a new session:
 
 > Your Manifest project is set up: framework, config, tests passing.
 >
-> Reloading context now — all the skills, extensions, and project conventions are loading fresh.
+> Type `/reload` now — it'll load all the skills, extensions, and project conventions fresh. Then tell me what you want to build first.
 
-Then execute `/reload`. After the reload completes, tell the user:
-
-> You're set. The full Manifest context is loaded — `AGENTS.md` for conventions, skills for specialized tasks, and the Spark sidekick if you set it up.
->
-> Tell me what you want to build first. I have the full context of how Manifest works — one feature per file, explicit inputs, declared side effects. Let's go.
+Wait for the user to type `/reload`. Don't proceed until they do.
 
 **If you are NOT a Pi agent:**
 
