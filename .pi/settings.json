@@ -4,5 +4,8 @@
   ],
   "extensions": [
     "../extensions/spark/pi-extension"
+  ],
+  "packages": [
+    "npm:pi-subagents"
   ]
 }
