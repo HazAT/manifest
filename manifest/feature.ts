@@ -1,6 +1,12 @@
 import type { InputSchemaDef } from './types'
 import type { RateLimitConfig } from '../services/rateLimiter'
 
+/** Authenticated user resolved from session. Passed to features via HandleContext. */
+export interface AuthUser {
+  id: string
+  email: string
+}
+
 /**
  * Standard response envelope returned by feature handlers.
  */
@@ -10,6 +16,7 @@ export interface FeatureResult {
   message: string
   data: unknown
   errors: Record<string, string>
+  headers?: Record<string, string>
 }
 
 /**
@@ -18,7 +25,9 @@ export interface FeatureResult {
  */
 export interface HandleContext<TInput = Record<string, unknown>> {
   input: TInput
-  ok: (message: string, opts?: { data?: unknown; status?: number }) => FeatureResult
+  request: Request
+  user: AuthUser | null
+  ok: (message: string, opts?: { data?: unknown; status?: number; headers?: Record<string, string> }) => FeatureResult
   fail: (message: string, status?: number) => FeatureResult
 }
 
@@ -76,6 +85,8 @@ export interface EmitFn {
  */
 export interface StreamContext<TInput = Record<string, unknown>> {
   input: TInput
+  request: Request
+  user: AuthUser | null
   emit: EmitFn
   close: () => void
   fail: (message: string) => void

@@ -8,7 +8,7 @@
  */
 
 export { defineFeature } from './feature'
-export type { FeatureDef, FeatureResult, HandleContext, FeatureOptions, StreamFeatureDef, StreamFeatureOptions, StreamContext, EmitFn, AnyFeatureDef } from './feature'
+export type { AuthUser, FeatureDef, FeatureResult, HandleContext, FeatureOptions, StreamFeatureDef, StreamFeatureOptions, StreamContext, EmitFn, AnyFeatureDef } from './feature'
 
 export { t } from './types'
 export type { FieldDef, InputSchemaDef, StringFieldDef, IntegerFieldDef, NumberFieldDef, BooleanFieldDef, ArrayFieldDef } from './types'

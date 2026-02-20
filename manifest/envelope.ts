@@ -39,7 +39,7 @@ export function toEnvelope(result: FeatureResult, meta: EnvelopeMeta): ResponseE
 }
 
 export function createResultHelpers(): {
-  ok: (message: string, opts?: { data?: unknown; status?: number }) => FeatureResult
+  ok: (message: string, opts?: { data?: unknown; status?: number; headers?: Record<string, string> }) => FeatureResult
   fail: (message: string, status?: number) => FeatureResult
 } {
   return {
@@ -50,6 +50,7 @@ export function createResultHelpers(): {
         message,
         data: opts.data ?? null,
         errors: {},
+        headers: opts.headers,
       }
     },
     fail(message, status = 400) {
