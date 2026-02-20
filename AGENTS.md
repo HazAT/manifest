@@ -80,7 +80,14 @@ To update the framework from upstream, load the `manifest-update` skill. To cont
 │   └── spark/          # The Spark sidekick. Pi extension that polls SQLite for events.
 │   └── spark-web/      # Spark web sidecar — browser dashboard with embedded Pi agent.
 ├── .pi/                # Pi agent configuration for this project.
-│   └── settings.json   # Points Pi to the Spark extension.
+│   ├── settings.json   # Points Pi to extensions, skills, and packages.
+│   ├── extensions/     # Pi extensions bundled with Manifest.
+│   │   ├── answer.ts   # Interactive Q&A for answering agent questions.
+│   │   ├── execute-command.ts  # Self-invoke slash commands programmatically.
+│   │   └── todos.ts    # File-based todo management with /todos TUI.
+│   └── agents/         # Subagent definitions for this project.
+│       ├── worker.md   # Manifest-aware implementation agent.
+│       └── reviewer.md # Manifest-aware code review agent.
 ├── .spark/             # Runtime artifacts (gitignored).
 │   └── spark.db        # SQLite database — events, access logs, all Spark state.
 ├── tests/              # Mirrors features/ 1:1.
