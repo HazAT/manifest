@@ -116,7 +116,7 @@ Group changed files by area:
 | Area | Path pattern | Description |
 |------|-------------|-------------|
 | **Framework** | `manifest/` | Core framework improvements |
-| **Skills** | `.claude/skills/` | Prompt and workflow refinements |
+| **Skills** | `.pi/skills/` | Prompt and workflow refinements |
 | **Docs** | `AGENTS.md`, `SPARK.md`, `README.md` | Documentation updates |
 | **Extensions** | `extensions/` | New or updated extensions |
 | **Config** | `config/` | Config structure changes |

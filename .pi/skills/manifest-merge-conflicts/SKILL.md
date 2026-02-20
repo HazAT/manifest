@@ -24,7 +24,7 @@ The upstream repo evolves the framework, docs, skills, and conventions. Your pro
 
 **Accept from upstream:**
 - Framework code improvements (`manifest/`)
-- Prompt and skill text refinements (`.claude/skills/`, `AGENTS.md` framework sections)
+- Prompt and skill text refinements (`.pi/skills/`, `AGENTS.md` framework sections)
 - Documentation polish and typo fixes
 - New conventions that don't break existing patterns
 - New extensions and extension updates
@@ -96,7 +96,7 @@ git checkout manifest -- manifest/some-file.ts
 **Category B: Application files (`features/`, `schemas/`, `services/`, `config/`)**
 Keep YOUR version. These define what your app is. Upstream's versions are templates/examples — they have no authority over your application. Remove the conflict markers and keep your code.
 
-**Category C: Documentation and skills (`AGENTS.md`, `.claude/skills/`, `README.md`)**
+**Category C: Documentation and skills (`AGENTS.md`, `.pi/skills/`, `README.md`)**
 This is nuanced. These files have two layers:
 - **Framework documentation** (how Manifest works) — accept upstream improvements
 - **Application documentation** (what YOUR app does) — keep yours

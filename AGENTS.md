@@ -22,11 +22,11 @@ Manifest ships with **Spark**, a reactive AI sidekick that watches your running 
 
 **Self-describing code.** Every feature, service, and schema carries machine-readable metadata. Descriptions on every input field. JSDoc on every schema column. Side effects declared before the logic. The codebase is its own documentation.
 
-**Commits carry knowledge.** Every commit message should be descriptive enough that an agent reading `git log` understands what changed and why without looking at the diff. Use a clear subject line and a body that explains the reasoning, what files were affected, and any migration steps. For larger changes, point to a plan file. The commit history is how the local agent learns what happened while it wasn't watching — treat it as a knowledge transfer, not a formality. Load `.claude/skills/manifest-commit/SKILL.md` before committing.
+**Commits carry knowledge.** Every commit message should be descriptive enough that an agent reading `git log` understands what changed and why without looking at the diff. Use a clear subject line and a body that explains the reasoning, what files were affected, and any migration steps. For larger changes, point to a plan file. The commit history is how the local agent learns what happened while it wasn't watching — treat it as a knowledge transfer, not a formality. Load `.pi/skills/manifest-commit/SKILL.md` before committing.
 
 **Know the why.** Before building a feature, understand why it exists — not just what it does. If the user asks for something and the motivation isn't clear, ask. The answer might change the approach, or reveal that the real need is different from the request. When you learn something that shifts the project's direction or clarifies its purpose, update `VISION.md`. This file is about *the app being built* — not about Manifest the framework. Keep it brief — a few sentences, not an essay. The vision should evolve with the project, not fossilize after day one.
 
-**We build this together.** The codebase is a shared workspace — between you, the next agent, and the human. When you make a significant change, the ripple doesn't stop at the code. Ask yourself: does AGENTS.md still tell the truth? Are the skills still accurate? Does the config cover what was just added? Every significant change is a prompt to check that the rest of the system still makes sense. Load `.claude/skills/manifest-learn/SKILL.md` for the full reflection checklist. The goal is simple: no one should ever follow stale instructions because you forgot to update the map after moving the furniture.
+**We build this together.** The codebase is a shared workspace — between you, the next agent, and the human. When you make a significant change, the ripple doesn't stop at the code. Ask yourself: does AGENTS.md still tell the truth? Are the skills still accurate? Does the config cover what was just added? Every significant change is a prompt to check that the rest of the system still makes sense. Load `.pi/skills/manifest-learn/SKILL.md` for the full reflection checklist. The goal is simple: no one should ever follow stale instructions because you forgot to update the map after moving the furniture.
 
 **Your app watches itself.** Manifest applications are designed to be observed by AI. The Spark sidekick runs alongside your app — when a feature throws a 500, when an unhandled exception crashes a process, Spark captures the error with full context (stack trace, feature name, route, trace ID, request input) and stores it in a SQLite database. A Pi extension polls the database and injects events into the agent's conversation. In both development and production, Spark investigates and fixes issues — with full tool access. In production it acts with extra care: smallest surgical fix, no refactoring, transparent about every change. This isn't bolted on — it's baked into the server, the response envelope, and the framework's error handling. Every `request_id` in a response envelope doubles as a trace ID that Spark uses to connect errors back to requests. Spark runs as a web sidecar process with a browser dashboard on port 8081, watching your app and fixing issues autonomously. Build with the assumption that an agent is always watching.
 
@@ -81,6 +81,7 @@ To update the framework from upstream, load the `manifest-update` skill. To cont
 │   └── spark-web/      # Spark web sidecar — browser dashboard with embedded Pi agent.
 ├── .pi/                # Pi agent configuration for this project.
 │   ├── settings.json   # Points Pi to extensions, skills, and packages.
+│   ├── skills/         # Agent skills for Manifest workflows.
 │   ├── extensions/     # Pi extensions bundled with Manifest.
 │   │   ├── answer.ts   # Interactive Q&A for answering agent questions.
 │   │   ├── execute-command.ts  # Self-invoke slash commands programmatically.
@@ -413,7 +414,7 @@ When the upstream Manifest repo adds new capabilities, the agent computes the ag
 The `.manifest-sync` file tracks which upstream commit you're synced to. Load the skill for the full flow:
 
 ```
-Read and follow .claude/skills/manifest-update/SKILL.md
+Read and follow .pi/skills/manifest-update/SKILL.md
 ```
 
 ## Contributing Back
@@ -421,7 +422,7 @@ Read and follow .claude/skills/manifest-update/SKILL.md
 If you improve framework code in `manifest/` or skills, you can contribute those changes back to the upstream repo. The agent identifies framework-related commits on `main`, cherry-picks them onto a contribution branch off `manifest`, and opens a PR.
 
 ```
-Read and follow .claude/skills/manifest-contribute/SKILL.md
+Read and follow .pi/skills/manifest-contribute/SKILL.md
 ```
 
 ## Spark — The Sidekick

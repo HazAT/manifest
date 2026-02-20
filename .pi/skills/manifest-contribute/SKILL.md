@@ -20,7 +20,7 @@ The `manifest` branch is your local read-only copy of the upstream framework. Co
 ## What's Contributable
 
 - Framework improvements (`manifest/` files)
-- Skill refinements (`.claude/skills/`)
+- Skill refinements (`.pi/skills/`)
 - Extension improvements or new extensions (`extensions/`)
 - Documentation improvements (`AGENTS.md` framework sections, `SPARK.md`)
 
@@ -53,13 +53,13 @@ If either is missing, set them up first (see the `manifest-update` skill).
 Find commits on `main` (or the current feature branch) that touch framework files:
 
 ```bash
-git log main --not manifest -- manifest/ .claude/skills/ extensions/ AGENTS.md SPARK.md --oneline
+git log main --not manifest -- manifest/ .pi/skills/ extensions/ AGENTS.md SPARK.md --oneline
 ```
 
 Read the full commit messages for context:
 
 ```bash
-git log main --not manifest -- manifest/ .claude/skills/ extensions/ AGENTS.md SPARK.md --format="medium"
+git log main --not manifest -- manifest/ .pi/skills/ extensions/ AGENTS.md SPARK.md --format="medium"
 ```
 
 Present the list to the user. **Ask which commits to contribute.** Never auto-select everything.

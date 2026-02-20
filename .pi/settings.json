@@ -1,6 +1,6 @@
 {
   "skills": [
-    "../.claude/skills"
+    "skills"
   ],
   "extensions": [
     "../extensions/spark/pi-extension",

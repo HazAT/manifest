@@ -37,7 +37,7 @@ If any section is stale, update it. AGENTS.md is the first thing an agent reads 
 
 ### 2. Skills
 
-Check each skill in `.claude/skills/`:
+Check each skill in `.pi/skills/`:
 
 - **manifest-commit** — Does the commit format still match current conventions? Are there new scopes to document?
 - **manifest-update** — Does the update process need new steps given what changed?
