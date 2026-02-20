@@ -1,12 +1,13 @@
 import { createManifestServer } from './manifest'
 import sparkConfig from './config/spark'
 import { sparkDb } from './services/sparkDb'
-import { auth } from './extensions/manifest-auth/services/auth'
+// import { auth } from './extensions/manifest-auth/services/auth'
 
 const server = await createManifestServer({
   projectDir: import.meta.dir,
   port: Number(Bun.env.PORT ?? 3100),
-  authenticate: auth.createAuthResolver(),
+  // To enable auth, uncomment the import above and the line below:
+  // authenticate: auth.createAuthResolver(),
 })
 
 console.log(`🔧 Manifest server running on http://localhost:${server.port}`)
